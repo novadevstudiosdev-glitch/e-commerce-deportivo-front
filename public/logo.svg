@@ -1,0 +1,11 @@
+/* ============================================
+   SVG PLACEHOLDER LOGO
+   ============================================ */
+
+<!-- Replace this with your actual logo SVG -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="#0066CC"/>
+  <text x="50%" y="50%" font-size="40" font-weight="bold" fill="white" text-anchor="middle" dy=".3em">
+    SW
+  </text>
+</svg>
