@@ -1,0 +1,10 @@
+// ============================================
+// ADMIN DEFAULT PAGE
+// ============================================
+
+import { redirect } from 'next/navigation';
+import { ROUTES } from '@/lib/routes';
+
+export default function AdminPage() {
+  redirect(ROUTES.ADMIN_STATS);
+}
