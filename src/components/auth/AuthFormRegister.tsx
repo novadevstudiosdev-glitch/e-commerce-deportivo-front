@@ -1,108 +1,31 @@
-'use client';
+import Input from '@/components/common/Input';
 
-import { useState } from 'react';
-
-// ============================================
-// AUTH FORM REGISTER - COMPONENTE
-// ============================================
-
-interface AuthFormRegisterProps {
-  onSubmit?: (data: any) => void;
-  isLoading?: boolean;
-}
-
-export function AuthFormRegister({ onSubmit, isLoading }: AuthFormRegisterProps) {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    passwordConfirm: '',
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implementar validación con React Hook Form + Zod
-    onSubmit?.(formData);
-  };
-
+export default function RegisterForm() {
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Nombre</label>
-          <input
-            type="text"
-            name="firstName"
-            value={formData.firstName}
-            onChange={handleChange}
-            placeholder="Juan"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-            disabled={isLoading}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Apellido</label>
-          <input
-            type="text"
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleChange}
-            placeholder="Pérez"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-            disabled={isLoading}
-          />
-        </div>
+    <form className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Input label="Nombre completo" placeholder="Juan Pérez" required />
+
+        <Input label="Correo electrónico" placeholder="tu@email.com" type="email" required />
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Email</label>
-        <input
-          type="email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          placeholder="tu@email.com"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-          disabled={isLoading}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Contraseña</label>
-        <input
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Input label="Contraseña" placeholder="Mínimo 6 caracteres" type="password" required />
+
+        <Input
+          label="Confirmar contraseña"
+          placeholder="Repite tu contraseña"
           type="password"
-          name="password"
-          value={formData.password}
-          onChange={handleChange}
-          placeholder="••••••••"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-          disabled={isLoading}
+          required
         />
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Confirmar Contraseña</label>
-        <input
-          type="password"
-          name="passwordConfirm"
-          value={formData.passwordConfirm}
-          onChange={handleChange}
-          placeholder="••••••••"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-          disabled={isLoading}
-        />
-      </div>
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-      >
-        {isLoading ? 'Registrando...' : 'Registrarse'}
+
+      <Input label="Teléfono" placeholder="+54 9 11 1234 5678" />
+
+      <Input label="Dirección" placeholder="Calle, Ciudad, Provincia" />
+
+      <button className="mt-4 w-full rounded-xl bg-gradient-to-r from-sky-500 to-cyan-500 py-3 font-semibold text-white hover:opacity-90">
+        Crear cuenta
       </button>
     </form>
   );

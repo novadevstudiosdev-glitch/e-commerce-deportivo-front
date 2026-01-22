@@ -1,56 +1,21 @@
-'use client';
+import Input from '@/components/common/Input';
 
-import { useState } from 'react';
-
-// ============================================
-// AUTH FORM LOGIN - COMPONENTE
-// ============================================
-
-interface AuthFormLoginProps {
-  onSubmit?: (data: any) => void;
-  isLoading?: boolean;
-}
-
-export function AuthFormLogin({ onSubmit, isLoading }: AuthFormLoginProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implementar validación con React Hook Form + Zod
-    onSubmit?.({ email, password });
-  };
-
+export default function LoginForm() {
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-      <div>
-        <label className="block text-sm font-medium mb-1">Email</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="tu@email.com"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-          disabled={isLoading}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Contraseña</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-          disabled={isLoading}
-        />
-      </div>
+    <form className="space-y-4">
+      <Input label="Correo electrónico" placeholder="tu@email.com" type="email" required />
+
+      <Input label="Contraseña" placeholder="••••••••" type="password" required />
+
+      <button className="mt-4 w-full rounded-xl bg-sky-600 py-3 font-semibold text-white hover:bg-sky-700">
+        Iniciar sesión
+      </button>
+
       <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+        type="button"
+        className="w-full rounded-xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
       >
-        {isLoading ? 'Ingresando...' : 'Ingresar'}
+        Continuar con Google
       </button>
     </form>
   );
