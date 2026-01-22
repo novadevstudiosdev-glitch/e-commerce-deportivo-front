@@ -1,7 +1,8 @@
 'use client';
 
 import { Order } from '@/types';
-import { formatCurrency, formatDateTime, ORDER_STATUS_LABELS } from '@/lib/utils';
+import { ORDER_STATUS_LABELS } from '@/lib/constants';
+import { formatCurrency, formatDateTime } from '@/lib/utils';
 
 // ============================================
 // ORDERS TABLE - COMPONENTE
