@@ -62,7 +62,7 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center">
-          <Image src="/logo2.png" alt="SportShop" width={80} height={80} />
+          <Image src="/logo.png" alt="SportShop" width={100} height={100} />
         </Link>
 
         {/* Links */}

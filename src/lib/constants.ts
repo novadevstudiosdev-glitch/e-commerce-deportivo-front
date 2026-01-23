@@ -31,7 +31,7 @@ export const ORDER_STATUS_LABELS = {
 };
 
 export const DEFAULT_AVATAR = '/images/default-avatar.png';
-export const LOGO_URL = '/logo.svg';
+export const LOGO_URL = '/logo.png';
 
 export const TOAST_DURATION = 3000;
 
