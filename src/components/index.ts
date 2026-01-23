@@ -4,7 +4,7 @@
 
 // Layout
 export { Navbar } from './layout/Navbar';
-export { Footer } from './layout/Footer';
+export { default as Footer } from './layout/Footer';
 export { CategoryMenu } from './layout/CategoryMenu';
 export { SearchBar } from './layout/SearchBar';
 
@@ -18,8 +18,8 @@ export { CartSummary } from './cart/CartSummary';
 export { CheckoutForm } from './cart/CheckoutForm';
 
 // Auth
-export { AuthFormLogin } from './auth/AuthFormLogin';
-export { AuthFormRegister } from './auth/AuthFormRegister';
+export { default as AuthFormLogin } from './auth/AuthFormLogin';
+export { default as AuthFormRegister } from './auth/AuthFormRegister';
 
 // Common
 export { ProfileForm } from './common/ProfileForm';

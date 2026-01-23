@@ -1,5 +1,5 @@
 import ProductCatalogPage from "@/components/catalog/ProductCatalogPage";
 
-export default function CategoriesPage() {
+export default function CategoriaPage() {
   return <ProductCatalogPage />;
 }
