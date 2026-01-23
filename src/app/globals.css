@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   VARIABLES CSS PERSONALIZADAS
+   ============================================ */
+
+:root {
+  --primary-color: #0066cc;
+  --secondary-color: #666666;
+  --success-color: #22c55e;
+  --error-color: #ef4444;
+  --warning-color: #f59e0b;
+  --info-color: #3b82f6;
+}
+
+/* ============================================
+   ESTILOS GLOBALES
+   ============================================ */
+
+body {
+  @apply bg-white text-gray-900;
+}
+
+a {
+  @apply text-primary hover:text-opacity-80 transition-colors;
+}
+
+button {
+  @apply font-medium transition-colors;
+}
+
+input,
+textarea,
+select {
+  @apply focus:ring-2 focus:ring-primary focus:ring-opacity-50;
+}
