@@ -1,4 +1,4 @@
-// ============================================
+﻿// ============================================
 // ADMIN STATS PAGE
 // ============================================
 
@@ -12,7 +12,7 @@ export default function AdminStatsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Cargar estadísticas del admin
+    // TODO: Cargar estad�sticas del admin
     setIsLoading(false);
   }, []);
 
@@ -26,7 +26,7 @@ export default function AdminStatsPage() {
           <p className="text-3xl font-bold">$0</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-600 text-sm font-semibold">Órdenes</h3>
+          <h3 className="text-gray-600 text-sm font-semibold">�"rdenes</h3>
           <p className="text-3xl font-bold">0</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
@@ -45,10 +45,11 @@ export default function AdminStatsPage() {
           <p className="text-gray-500">No hay datos</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Órdenes Recientes</h2>
+          <h2 className="text-xl font-semibold mb-4">�"rdenes Recientes</h2>
           <p className="text-gray-500">No hay datos</p>
         </div>
       </div>
     </div>
   );
 }
+

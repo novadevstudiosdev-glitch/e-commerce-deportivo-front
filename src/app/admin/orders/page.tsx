@@ -1,4 +1,4 @@
-// ============================================
+﻿// ============================================
 // ADMIN ORDERS PAGE
 // ============================================
 
@@ -13,7 +13,7 @@ export default function AdminOrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Cargar órdenes
+    // TODO: Cargar �rdenes
     setIsLoading(false);
   }, []);
 
@@ -24,8 +24,9 @@ export default function AdminOrdersPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-8">Gestionar Órdenes</h1>
+      <h1 className="text-3xl font-bold mb-8">Gestionar �"rdenes</h1>
       <AdminOrdersBoard orders={orders} isLoading={isLoading} onStatusChange={handleStatusChange} />
     </div>
   );
 }
+

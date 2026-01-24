@@ -1,4 +1,4 @@
-type Props = {
+﻿type Props = {
   mode: 'login' | 'register';
   onChange: (mode: 'login' | 'register') => void;
 };
@@ -32,3 +32,4 @@ export default function AuthTabs({ mode, onChange }: Props) {
     </div>
   );
 }
+

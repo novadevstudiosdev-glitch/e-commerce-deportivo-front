@@ -112,4 +112,6 @@ export interface LoginCredentials {
 export interface RegisterData extends LoginCredentials {
   firstName: string;
   lastName: string;
+  phone?: string;
 }
+

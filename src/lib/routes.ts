@@ -1,9 +1,9 @@
-// ============================================
-// DEFINICIÓN DE RUTAS DE LA APLICACIÓN
+﻿// ============================================
+// DEFINICI�"N DE RUTAS DE LA APLICACI�"N
 // ============================================
 
 export const ROUTES = {
-  // Públicas
+  // P�blicas
   HOME: '/',
   PRODUCTS: '/products',
   PRODUCT_DETAIL: (slug: string) => `/products/${slug}`,
@@ -49,3 +49,4 @@ export const ADMIN_ROUTES = [
   ROUTES.ADMIN_OFFERS,
   ROUTES.ADMIN_STATS,
 ];
+

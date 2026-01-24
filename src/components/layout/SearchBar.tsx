@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { ROUTES } from '@/lib/routes';
@@ -37,3 +37,4 @@ export function SearchBar() {
     </form>
   );
 }
+

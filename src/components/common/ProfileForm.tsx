@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { UserProfile } from '@/types';
 
@@ -75,3 +75,4 @@ export function ProfileForm({ profile, onSubmit, isLoading }: ProfileFormProps) 
     </form>
   );
 }
+

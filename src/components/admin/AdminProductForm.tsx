@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Product } from '@/types';
 
@@ -61,3 +61,4 @@ export function AdminProductForm({ product, onSubmit, isLoading }: AdminProductF
     </form>
   );
 }
+
