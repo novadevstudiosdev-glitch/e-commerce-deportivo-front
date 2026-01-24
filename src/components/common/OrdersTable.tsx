@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Order } from '@/types';
 import { ORDER_STATUS_LABELS } from '@/lib/constants';
@@ -53,3 +53,4 @@ export function OrdersTable({ orders, isLoading }: OrdersTableProps) {
     </div>
   );
 }
+

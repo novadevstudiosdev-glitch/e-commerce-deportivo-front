@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 // ============================================
 // CHECKOUT FORM - COMPONENTE (SKELETON)
@@ -46,3 +46,4 @@ export function CheckoutForm({ onSubmit }: CheckoutFormProps) {
     </form>
   );
 }
+

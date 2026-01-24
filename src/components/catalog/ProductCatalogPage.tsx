@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Sora } from "next/font/google";
-import {
-  Badge,
-  Box,
+import {  Box,
   Button,
   Checkbox,
   Chip,
@@ -16,9 +14,7 @@ import {
   FormControlLabel,
   Grid,
   IconButton,
-  Paper,
-  Popover,
-  Rating,
+  Paper,  Rating,
   Slider,
   Stack,
   TextField,
@@ -29,7 +25,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import { useCart } from "@/hooks";
 
 const sora = Sora({
   subsets: ["latin"],
@@ -47,15 +43,6 @@ type Product = {
   rating: number;
   reviews: number;
   sizes: string[];
-  image: string;
-};
-
-type CartItem = {
-  id: string;
-  name: string;
-  size: string;
-  qty: number;
-  price: number;
   image: string;
 };
 
@@ -357,33 +344,6 @@ const PRODUCTS: Product[] = [
   },
 ];
 
-const CART_ITEMS: CartItem[] = [
-  {
-    id: "c1",
-    name: "Zapatillas Running Pro Max",
-    size: "42",
-    qty: 1,
-    price: 89.99,
-    image: "/zapatillas%20running.avif",
-  },
-  {
-    id: "c2",
-    name: "Camiseta Tecnica Dry-Fit",
-    size: "M",
-    qty: 2,
-    price: 34.99,
-    image: "/remeraTecnica.jpg",
-  },
-  {
-    id: "c3",
-    name: "Mochila Deportiva 30L",
-    size: "Unica",
-    qty: 1,
-    price: 39.99,
-    image: "/mochilaDeportiva.avif",
-  },
-];
-
 const theme = createTheme({
   palette: {
     primary: { main: "#1E88E5" },
@@ -429,6 +389,7 @@ function getDiscountLabel(product: Product) {
 }
 
 export default function ProductCatalogPage() {
+  const { addItem } = useCart();
   const params = useParams();
   const searchParams = useSearchParams();
   const categoryFromQuery = searchParams.get("category")?.toLowerCase() ?? "";
@@ -455,11 +416,7 @@ export default function ProductCatalogPage() {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [cartAnchor, setCartAnchor] = useState<HTMLElement | null>(null);
-
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const cartOpen = Boolean(cartAnchor);
-
   const filteredProducts = useMemo(() => {
     return PRODUCTS.filter((product) => {
       if (activeCategory) {
@@ -490,10 +447,6 @@ export default function ProductCatalogPage() {
     });
   }, [activeCategory, priceMin, priceMax, selectedBrands, selectedSizes]);
 
-  const cartTotal = useMemo(() => {
-    return CART_ITEMS.reduce((sum, item) => sum + item.price * item.qty, 0);
-  }, []);
-
   const toggleBrand = (brand: string) => {
     setSelectedBrands((prev) =>
       prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
@@ -509,6 +462,31 @@ export default function ProductCatalogPage() {
   const applyPrice = () => {
     setPriceMin(Math.min(tempMin, tempMax));
     setPriceMax(Math.max(tempMin, tempMax));
+  };
+
+  const handleAddToCart = (product: Product) => {
+    const primaryCategory = product.categories[0] || "general";
+    addItem(
+      {
+        id: product.id,
+        name: product.name,
+        slug: product.id,
+        description: product.name,
+        price: product.price,
+        originalPrice: product.oldPrice,
+        category: {
+          id: primaryCategory,
+          name: primaryCategory,
+          slug: primaryCategory,
+        },
+        images: [product.image],
+        stock: 999,
+        rating: product.rating,
+        reviews: product.reviews,
+        tags: [product.brand],
+      },
+      1
+    );
   };
 
   const sidebarContent = (
@@ -553,9 +531,7 @@ export default function ProductCatalogPage() {
           value={Math.min(tempMin, tempMax)}
           min={priceBounds.min}
           max={priceBounds.max}
-          onChange={(_, value) =>
-            setTempMin(Math.min(value as number, tempMax))
-          }
+          onChange={(_, value) => setTempMin(Math.min(value as number, tempMax))}
           sx={{ mt: 0.5 }}
         />
         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
@@ -565,9 +541,7 @@ export default function ProductCatalogPage() {
           value={Math.max(tempMin, tempMax)}
           min={priceBounds.min}
           max={priceBounds.max}
-          onChange={(_, value) =>
-            setTempMax(Math.max(value as number, tempMin))
-          }
+          onChange={(_, value) => setTempMax(Math.max(value as number, tempMin))}
           sx={{ mt: 0.5 }}
         />
         <Button
@@ -667,16 +641,7 @@ export default function ProductCatalogPage() {
                 >
                   Filtros
                 </Button>
-              )}
-              <IconButton
-                onClick={(event) => setCartAnchor(event.currentTarget)}
-                sx={{ bgcolor: "#fff", border: "1px solid #E5E7EB" }}
-              >
-                <Badge color="primary" badgeContent={CART_ITEMS.length}>
-                  <ShoppingCartIcon />
-                </Badge>
-              </IconButton>
-            </Stack>
+              )}            </Stack>
           </Stack>
 
           <Box
@@ -819,6 +784,7 @@ export default function ProductCatalogPage() {
                               bgcolor: "#1E88E5",
                               "&:hover": { bgcolor: "#1565C0" },
                             }}
+                            onClick={() => handleAddToCart(product)}
                           >
                             Anadir al carrito
                           </Button>
@@ -840,79 +806,7 @@ export default function ProductCatalogPage() {
         PaperProps={{ sx: { p: 2, width: 300, bgcolor: "#F6F7FB" } }}
       >
         {sidebarContent}
-      </Drawer>
-
-      <Popover
-        open={cartOpen}
-        anchorEl={cartAnchor}
-        onClose={() => setCartAnchor(null)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
-        PaperProps={{ sx: { p: 2, width: 320, borderRadius: 3, boxShadow: "0 10px 24px rgba(0,0,0,0.15)" } }}
-      >
-        <Typography variant="subtitle1" fontWeight={700}>
-          Carrito de Compras
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {CART_ITEMS.length} articulos
-        </Typography>
-
-        <Stack spacing={1.5} sx={{ mt: 2, maxHeight: 280, overflowY: "auto" }}>
-          {CART_ITEMS.map((item) => (
-            <Stack direction="row" spacing={1.5} key={item.id} alignItems="center">
-              <Box
-                component="img"
-                src={item.image}
-                alt={item.name}
-                sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 2,
-                  bgcolor: "#F1F3F6",
-                  objectFit: "contain",
-                  p: 0.5,
-                }}
-              />
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={600} noWrap>
-                  {item.name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Talla: {item.size} | Cant: {item.qty}
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: "right" }}>
-                <Typography variant="body2" fontWeight={700} color="primary">
-                  {formatPrice(item.price)}
-                </Typography>
-                <IconButton size="small" sx={{ mt: 0.5 }}>
-                  <DeleteOutlineIcon fontSize="small" />
-                </IconButton>
-              </Box>
-            </Stack>
-          ))}
-        </Stack>
-
-        <Divider sx={{ my: 2 }} />
-
-        <Stack direction="row" justifyContent="space-between">
-          <Typography variant="body2" fontWeight={700}>
-            Total:
-          </Typography>
-          <Typography variant="body1" fontWeight={800} color="primary">
-            {formatPrice(cartTotal)}
-          </Typography>
-        </Stack>
-
-        <Stack spacing={1} sx={{ mt: 2 }}>
-          <Button variant="outlined" fullWidth>
-            Ver Carrito
-          </Button>
-          <Button variant="contained" fullWidth>
-            Finalizar Compra
-          </Button>
-        </Stack>
-      </Popover>
-    </ThemeProvider>
+      </Drawer>    </ThemeProvider>
   );
 }
+

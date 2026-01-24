@@ -1,4 +1,4 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 
 export default function Footer() {
   return (
@@ -28,7 +28,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/categories" className="hover:text-sky-600">
-                  Categorías
+                  Categor�as
                 </Link>
               </li>
               <li>
@@ -50,7 +50,7 @@ export default function Footer() {
             <ul className="mt-4 space-y-2 text-sm text-slate-600">
               <li>
                 <Link href="/login" className="hover:text-sky-600">
-                  Iniciar sesión
+                  Iniciar sesi�n
                 </Link>
               </li>
               <li>
@@ -82,7 +82,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="#" className="hover:text-sky-600">
-                  Envíos
+                  Env�os
                 </Link>
               </li>
               <li>
@@ -92,7 +92,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="#" className="hover:text-sky-600">
-                  Términos y condiciones
+                  T�rminos y condiciones
                 </Link>
               </li>
             </ul>
@@ -111,10 +111,11 @@ export default function Footer() {
           <div className="flex items-center gap-4 text-slate-500">
             <span className="text-xs">Argentina</span>
             <span className="h-1 w-1 rounded-full bg-slate-400" />
-            <span className="text-xs">Español</span>
+            <span className="text-xs">Espa�ol</span>
           </div>
         </div>
       </div>
     </footer>
   );
 }
+

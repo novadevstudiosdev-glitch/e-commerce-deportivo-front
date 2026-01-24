@@ -1,4 +1,4 @@
-// ============================================
+﻿// ============================================
 // ORDERS PAGE (PROTEGIDA)
 // ============================================
 
@@ -13,14 +13,15 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Cargar órdenes del usuario
+    // TODO: Cargar �rdenes del usuario
     setIsLoading(false);
   }, []);
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h1 className="text-3xl font-bold mb-6">Mis Órdenes</h1>
+      <h1 className="text-3xl font-bold mb-6">Mis �"rdenes</h1>
       <OrdersTable orders={orders} isLoading={isLoading} />
     </div>
   );
 }
+

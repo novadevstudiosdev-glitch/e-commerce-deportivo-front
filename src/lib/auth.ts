@@ -1,8 +1,8 @@
-// ============================================
-// NEXT AUTH - CONFIGURACIÓN BÁSICA (PLACEHOLDER)
+﻿// ============================================
+// NEXT AUTH - CONFIGURACI�"N BÁSICA (PLACEHOLDER)
 // ============================================
 
-// TODO: Completar configuración de NextAuth
+// TODO: Completar configuraci�n de NextAuth
 // Este archivo es un placeholder para futuras implementaciones
 
 /*
@@ -20,7 +20,7 @@ export const authOptions = {
       },
       async authorize(credentials) {
         // TODO: Llamar a la API para validar credenciales
-        // TODO: Retornar usuario si es válido
+        // TODO: Retornar usuario si es v�lido
         return null;
       },
     }),
@@ -55,3 +55,4 @@ export const handler = NextAuth(authOptions);
 */
 
 export default {};
+

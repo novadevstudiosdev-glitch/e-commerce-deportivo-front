@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { ReactNode } from 'react';
 
@@ -15,3 +15,4 @@ export function ToastProvider({ children }: ToastProviderProps) {
 }
 
 // TODO: Implementar con librería como sonner o react-hot-toast
+

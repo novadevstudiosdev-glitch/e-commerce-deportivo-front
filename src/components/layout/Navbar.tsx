@@ -1,9 +1,13 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
-//cambios
+import { useAuthStore } from '@/store';
+import { useCart } from '@/hooks';
+import { useRouter, usePathname } from 'next/navigation';
+import Swal from 'sweetalert2';
+
 type CategoryCard = {
   title: string;
   subtitle: string;
@@ -35,8 +39,40 @@ export function Navbar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const megaRef = useRef<HTMLDivElement | null>(null);
   const profileRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
+  const { session, logout } = useAuthStore();
+  const { totalItems } = useCart();
+  const [isClient, setIsClient] = useState(false);
+  const pathname = usePathname();
+  const isAuthPage = pathname === '/login' || pathname === '/register';
 
-  // Close on outside click / ESC
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const handleLogout = async () => {
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: '¿Cerrar sesión?',
+      text: '¿Estás seguro de que deseas cerrar sesión?',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, cerrar sesión',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+    });
+
+    if (result.isConfirmed) {
+      logout();
+      router.push('/');
+      await Swal.fire({
+        icon: 'success',
+        title: 'Sesión cerrada',
+        text: 'Has cerrado sesión correctamente.',
+        confirmButtonColor: '#0ea5e9',
+      });
+    }
+  };
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -62,7 +98,7 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center">
-          <Image src="/logo.png" alt="SportShop" width={100} height={100} />
+          <Image src="/logo.png" alt="SportShop" width={120} height={120} />
         </Link>
 
         {/* Links */}
@@ -151,75 +187,101 @@ export function Navbar() {
 
         {/* Right actions */}
         <div className="ml-auto flex items-center gap-2">
-          <Link
-            href="/login"
-            className="rounded-full px-3 py-2 text-sm text-black/70 hover:bg-black/5 hover:text-black focus:outline-none focus:ring-2 focus:ring-black/10"
-          >
-            Iniciar sesion
-          </Link>
-          {/* Cart */}
-          <Link
-            href="/cart"
-            className="relative rounded-full p-2 hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-black/10"
-            aria-label="Carrito"
-          >
-            <CartIcon className="h-5 w-5 text-black/70" />
-            <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-sky-600 px-1 text-[11px] font-semibold text-white">
-              3
-            </span>
-          </Link>
+          {!isClient ? null : session?.isAuthenticated ? (
+            <>
+              {/* Carrito solo cuando está logueado */}
+              <Link
+                href="/cart"
+                className="relative rounded-full p-2 hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-black/10"
+                aria-label="Carrito"
+              >
+                <CartIcon className="h-5 w-5 text-black/70" />
+                <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-sky-600 px-1 text-[11px] font-semibold text-white">{totalItems}</span>
+              </Link>
 
-          {/* Profile dropdown */}
-          <div className="relative" ref={profileRef}>
-            <button
-              type="button"
-              onClick={() => setProfileOpen((v) => !v)}
-              aria-expanded={profileOpen}
-              className="flex items-center gap-2 rounded-full p-1.5 hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-black/10"
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-600 text-xs font-semibold text-white">
-                A
-              </div>
-              <ChevronDown className="h-4 w-4 text-black/60" />
-            </button>
-
-            {profileOpen && (
-              <div className="absolute right-0 top-[calc(100%+10px)] w-56 rounded-2xl border border-black/10 bg-white p-2 shadow-xl">
-                <Link
-                  href="/account"
-                  className="block rounded-xl px-3 py-2 text-sm text-black/70 hover:bg-black/5"
-                  onClick={() => setProfileOpen(false)}
-                >
-                  Mi cuenta
-                </Link>
-                <Link
-                  href="/account/orders"
-                  className="block rounded-xl px-3 py-2 text-sm text-black/70 hover:bg-black/5"
-                  onClick={() => setProfileOpen(false)}
-                >
-                  Mis compras
-                </Link>
-                <Link
-                  href="/admin"
-                  className="block rounded-xl px-3 py-2 text-sm text-black/70 hover:bg-black/5"
-                  onClick={() => setProfileOpen(false)}
-                >
-                  Admin
-                </Link>
-                <div className="my-2 h-px bg-black/5" />
+              {/* Profile dropdown cuando está logueado */}
+              <div className="relative" ref={profileRef}>
                 <button
-                  className="w-full rounded-xl px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
                   type="button"
-                  onClick={() => {
-                    setProfileOpen(false);
-                    // TODO: logout
-                  }}
+                  onClick={() => setProfileOpen((v) => !v)}
+                  aria-expanded={profileOpen}
+                  className="flex items-center gap-2 rounded-full px-3 py-1.5 hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-black/10"
                 >
-                  Cerrar sesión
+                  <span className="hidden text-sm font-medium text-sky-600 sm:inline">
+                    ¡Hola, {session?.user?.firstName || 'Usuario'}!
+                  </span>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-600 text-xs font-semibold text-white">
+                    {(session?.user?.firstName || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <ChevronDown
+                    className={`h-4 w-4 text-black/60 transition ${profileOpen ? 'rotate-180' : ''}`}
+                  />
                 </button>
+
+                {profileOpen && (
+                  <div className="absolute right-0 top-[calc(100%+10px)] w-56 rounded-2xl border border-black/10 bg-white p-2 shadow-xl">
+                    <div className="px-3 py-2 text-sm text-black/60">
+                      <p className="font-semibold text-black/80">
+                        {session?.user?.firstName} {session?.user?.lastName}
+                      </p>
+                      <p className="text-xs">{session?.user?.email}</p>
+                    </div>
+                    <div className="my-2 h-px bg-black/5" />
+                    <Link
+                      href="/account"
+                      className="block rounded-xl px-3 py-2 text-sm text-black/70 hover:bg-black/5"
+                      onClick={() => setProfileOpen(false)}
+                    >
+                      Mi cuenta
+                    </Link>
+                    <Link
+                      href="/account/orders"
+                      className="block rounded-xl px-3 py-2 text-sm text-black/70 hover:bg-black/5"
+                      onClick={() => setProfileOpen(false)}
+                    >
+                      Mis compras
+                    </Link>
+                    {session?.isAdmin && (
+                      <Link
+                        href="/admin"
+                        className="block rounded-xl px-3 py-2 text-sm text-black/70 hover:bg-black/5"
+                        onClick={() => setProfileOpen(false)}
+                      >
+                        Admin
+                      </Link>
+                    )}
+                    <div className="my-2 h-px bg-black/5" />
+                    <button
+                      className="w-full rounded-xl px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                      type="button"
+                      onClick={() => {
+                        setProfileOpen(false);
+                        handleLogout();
+                      }}
+                    >
+                      Cerrar sesión
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <>
+              {/* Cuando NO está logueado */}
+              <Link
+                href="/register"
+                className="rounded-full px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 transition focus:outline-none focus:ring-2 focus:ring-sky-500"
+              >
+                Registrarse
+              </Link>
+              <Link
+                href="/login"
+                className="rounded-full px-4 py-2 text-sm text-black/70 hover:bg-black/5 hover:text-black focus:outline-none focus:ring-2 focus:ring-black/10"
+              >
+                Iniciar sesion
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
@@ -233,6 +295,28 @@ export function Navbar() {
           />
         </div>
       </div>
+      {isAuthPage && (
+        <div className="border-t border-black/5 bg-white">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 text-xs text-black/60">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-black/[0.04] px-3 py-1">Envios a todo el pais</span>
+              <span className="rounded-full bg-black/[0.04] px-3 py-1">Cambios faciles</span>
+              <span className="rounded-full bg-black/[0.04] px-3 py-1">Pago seguro</span>
+            </div>
+            <div className="hidden sm:flex items-center gap-3">
+              <Link
+                href="/product-catalog"
+                className="font-semibold text-sky-700 hover:text-sky-800"
+              >
+                Ver catalogo
+              </Link>
+              <Link href="/" className="text-black/60 hover:text-black/80">
+                Inicio
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
@@ -298,3 +382,6 @@ function UserIcon({ className = '' }: { className?: string }) {
     </svg>
   );
 }
+
+
+

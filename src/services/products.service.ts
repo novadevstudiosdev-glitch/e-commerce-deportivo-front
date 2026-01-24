@@ -1,4 +1,4 @@
-import api from '@/lib/api';
+﻿import api from '@/lib/api';
 import { Product, Category } from '@/types';
 
 // ============================================
@@ -61,3 +61,4 @@ export const productsService = {
     return [];
   },
 };
+

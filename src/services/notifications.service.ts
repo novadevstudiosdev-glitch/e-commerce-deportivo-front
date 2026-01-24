@@ -1,4 +1,4 @@
-import api from '@/lib/api';
+﻿import api from '@/lib/api';
 
 // ============================================
 // SERVICIOS DE NOTIFICACIONES
@@ -50,3 +50,4 @@ export const notificationsService = {
     console.log('Sending low stock alert:', { productId, currentStock });
   },
 };
+

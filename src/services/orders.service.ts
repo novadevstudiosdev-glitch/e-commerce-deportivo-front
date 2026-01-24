@@ -1,8 +1,8 @@
-import api from '@/lib/api';
+﻿import api from '@/lib/api';
 import { Order, CartItem } from '@/types';
 
 // ============================================
-// SERVICIOS DE ÓRDENES
+// SERVICIOS DE �"RDENES
 // ============================================
 
 export const ordersService = {
@@ -26,7 +26,7 @@ export const ordersService = {
   },
 
   /**
-   * Obtener órdenes del usuario
+   * Obtener �rdenes del usuario
    */
   async getUserOrders(userId: string): Promise<Order[]> {
     // TODO: Implementar llamada real
@@ -55,3 +55,4 @@ export const ordersService = {
     return 'pending';
   },
 };
+
