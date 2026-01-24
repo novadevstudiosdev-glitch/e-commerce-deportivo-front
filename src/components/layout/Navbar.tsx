@@ -228,14 +228,14 @@ export function Navbar() {
                     </div>
                     <div className="my-2 h-px bg-black/5" />
                     <Link
-                      href="/account"
+                      href="/dashboard"
                       className="block rounded-xl px-3 py-2 text-sm text-black/70 hover:bg-black/5"
                       onClick={() => setProfileOpen(false)}
                     >
                       Mi cuenta
                     </Link>
                     <Link
-                      href="/account/orders"
+                      href="/dashboard/orders"
                       className="block rounded-xl px-3 py-2 text-sm text-black/70 hover:bg-black/5"
                       onClick={() => setProfileOpen(false)}
                     >
@@ -382,6 +382,7 @@ function UserIcon({ className = '' }: { className?: string }) {
     </svg>
   );
 }
+
 
 
 

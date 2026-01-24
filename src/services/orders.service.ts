@@ -1,58 +1,46 @@
 ﻿import api from '@/lib/api';
-import { Order, CartItem } from '@/types';
 
 // ============================================
-// SERVICIOS DE �"RDENES
+// SERVICIOS DE ORDENES
 // ============================================
+
+export type ApiOrderStatus = 'pendiente_pago' | 'pagado' | 'en_preparacion' | 'enviado' | 'entregado';
+
+export interface OrdersListItem {
+  id: string;
+  status: ApiOrderStatus;
+  total: string;
+  currency: string;
+  created_at: string;
+  itemsCount?: number;
+}
+
+export interface OrdersListResponse {
+  page: number;
+  limit: number;
+  total: number;
+  data: OrdersListItem[];
+}
 
 export const ordersService = {
   /**
-   * Crear una nueva orden
+   * Obtener ordenes del usuario autenticado
    */
-  async createOrder(items: CartItem[], shippingAddress: any): Promise<Order> {
-    // TODO: Implementar llamada real
-    // return api.post('/orders', { items, shippingAddress });
-    console.log('Creating order:', { items, shippingAddress });
-    return {
-      id: '',
-      userId: '',
-      items: [],
-      totalAmount: 0,
-      status: 'pending',
-      shippingAddress: {},
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-  },
-
-  /**
-   * Obtener �rdenes del usuario
-   */
-  async getUserOrders(userId: string): Promise<Order[]> {
-    // TODO: Implementar llamada real
-    // return api.get(`/users/${userId}/orders`);
-    console.log('Fetching user orders:', userId);
-    return [];
+  async getMyOrders(params?: {
+    page?: number;
+    limit?: number;
+    orderStatus?: ApiOrderStatus;
+    sort?: 'newest' | 'oldest';
+  }): Promise<OrdersListResponse> {
+    const response = await api.get('/users/me/orders', { params });
+    return response.data as OrdersListResponse;
   },
 
   /**
    * Obtener orden por ID
    */
-  async getOrderById(orderId: string): Promise<Order | null> {
-    // TODO: Implementar llamada real
-    // return api.get(`/orders/${orderId}`);
-    console.log('Fetching order:', orderId);
-    return null;
-  },
-
-  /**
-   * Obtener estado de orden
-   */
-  async getOrderStatus(orderId: string): Promise<string> {
-    // TODO: Implementar llamada real
-    // return api.get(`/orders/${orderId}/status`);
-    console.log('Fetching order status:', orderId);
-    return 'pending';
+  async getOrderById(orderId: string) {
+    const response = await api.get(`/users/me/orders/${orderId}`);
+    return response.data;
   },
 };
-

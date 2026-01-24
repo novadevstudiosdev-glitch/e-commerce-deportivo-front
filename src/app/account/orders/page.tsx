@@ -19,9 +19,8 @@ export default function OrdersPage() {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h1 className="text-3xl font-bold mb-6">Mis �"rdenes</h1>
+      <h1 className="text-3xl font-bold mb-6">Mis órdenes</h1>
       <OrdersTable orders={orders} isLoading={isLoading} />
     </div>
   );
 }
-

@@ -1,64 +1,48 @@
 ﻿import api from '@/lib/api';
-import { Product, Category } from '@/types';
 
 // ============================================
 // SERVICIOS DE PRODUCTOS
 // ============================================
 
+export interface ProductPublic {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  currency: string;
+  stock: number;
+  category: string;
+  images?: string[] | null;
+  is_featured: boolean;
+  created_at: string;
+}
+
+export interface ProductListResponse {
+  page: number;
+  limit: number;
+  total: number;
+  data: ProductPublic[];
+}
+
 export const productsService = {
   /**
-   * Obtener todos los productos con filtros
+   * Obtener productos con filtros
    */
   async getProducts(filters?: {
     category?: string;
     search?: string;
     sort?: string;
     page?: number;
-  }): Promise<{ products: Product[]; total: number }> {
-    // TODO: Implementar llamada real
-    // return api.get('/products', { params: filters });
-    console.log('Fetching products with filters:', filters);
-    return { products: [], total: 0 };
-  },
+    limit?: number;
+  }): Promise<ProductListResponse> {
+    const params: Record<string, any> = {};
+    if (filters?.category) params.category = filters.category;
+    if (filters?.search) params.q = filters.search;
+    if (filters?.sort) params.sort = filters.sort;
+    if (filters?.page) params.page = filters.page;
+    if (filters?.limit) params.limit = filters.limit;
 
-  /**
-   * Obtener producto por slug
-   */
-  async getProductBySlug(slug: string): Promise<Product | null> {
-    // TODO: Implementar llamada real
-    // return api.get(`/products/${slug}`);
-    console.log('Fetching product:', slug);
-    return null;
-  },
-
-  /**
-   * Obtener productos por categoría
-   */
-  async getProductsByCategory(category: string): Promise<Product[]> {
-    // TODO: Implementar llamada real
-    // return api.get(`/products/category/${category}`);
-    console.log('Fetching products for category:', category);
-    return [];
-  },
-
-  /**
-   * Buscar productos
-   */
-  async searchProducts(query: string): Promise<Product[]> {
-    // TODO: Implementar llamada real
-    // return api.get('/products/search', { params: { q: query } });
-    console.log('Searching products:', query);
-    return [];
-  },
-
-  /**
-   * Obtener categorías
-   */
-  async getCategories(): Promise<Category[]> {
-    // TODO: Implementar llamada real
-    // return api.get('/categories');
-    console.log('Fetching categories');
-    return [];
+    const response = await api.get('/products', { params });
+    return response.data as ProductListResponse;
   },
 };
-

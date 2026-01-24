@@ -9,6 +9,7 @@ import { usePathname } from 'next/navigation';
 import { RequireAuth } from '@/utils/requireAuth';
 import { ROUTES } from '@/lib/routes';
 import { useAuth } from '@/hooks';
+import { Navbar } from '@/components';
 
 const navItems = [
   { label: 'Dashboard', href: ROUTES.ACCOUNT },
@@ -34,6 +35,8 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   return (
     <RequireAuth>
       <div className="min-h-screen bg-[#F6F7FB]">
+        <Navbar />
+
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-10 lg:grid-cols-[280px_1fr]">
           <aside className="h-fit rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-3">

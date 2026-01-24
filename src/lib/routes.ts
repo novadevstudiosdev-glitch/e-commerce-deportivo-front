@@ -1,9 +1,9 @@
 ﻿// ============================================
-// DEFINICI�"N DE RUTAS DE LA APLICACI�"N
+// DEFINICION DE RUTAS DE LA APLICACION
 // ============================================
 
 export const ROUTES = {
-  // P�blicas
+  // Publicas
   HOME: '/',
   PRODUCTS: '/products',
   PRODUCT_DETAIL: (slug: string) => `/products/${slug}`,
@@ -14,7 +14,15 @@ export const ROUTES = {
   AUTH_LOGIN: '/auth/login',
   AUTH_REGISTER: '/auth/register',
 
-  // Protegidas - Cliente
+  // Dashboard (nuevo)
+  DASHBOARD: '/dashboard',
+  DASHBOARD_ADMIN: '/dashboard/admin',
+  DASHBOARD_PROFILE: '/dashboard/profile',
+  DASHBOARD_ORDERS: '/dashboard/orders',
+  DASHBOARD_FAVORITES: '/dashboard/favorites',
+  DASHBOARD_SETTINGS: '/dashboard/settings',
+
+  // Protegidas - Cliente (legacy)
   CHECKOUT: '/checkout',
   ACCOUNT: '/account',
   ACCOUNT_PROFILE: '/account/profile',
@@ -40,6 +48,12 @@ export const PROTECTED_ROUTES = [
   ROUTES.CHECKOUT,
   ROUTES.ACCOUNT_PROFILE,
   ROUTES.ACCOUNT_ORDERS,
+  ROUTES.DASHBOARD,
+  ROUTES.DASHBOARD_ADMIN,
+  ROUTES.DASHBOARD_PROFILE,
+  ROUTES.DASHBOARD_ORDERS,
+  ROUTES.DASHBOARD_FAVORITES,
+  ROUTES.DASHBOARD_SETTINGS,
 ];
 
 export const ADMIN_ROUTES = [
@@ -48,5 +62,5 @@ export const ADMIN_ROUTES = [
   ROUTES.ADMIN_ORDERS,
   ROUTES.ADMIN_OFFERS,
   ROUTES.ADMIN_STATS,
+  ROUTES.DASHBOARD_ADMIN,
 ];
-
