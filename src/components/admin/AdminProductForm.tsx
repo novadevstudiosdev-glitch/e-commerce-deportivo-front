@@ -1,5 +1,6 @@
 ﻿'use client';
 
+import type { FormEvent } from 'react';
 import { Product } from '@/types';
 
 // ============================================
@@ -8,15 +9,16 @@ import { Product } from '@/types';
 
 interface AdminProductFormProps {
   product?: Product;
-  onSubmit?: (data: any) => void;
+  onSubmit?: (data: Partial<Product>) => void;
   isLoading?: boolean;
 }
 
 export function AdminProductForm({ product, onSubmit, isLoading }: AdminProductFormProps) {
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // TODO: Implementar validación con React Hook Form + Zod
-    onSubmit?.({});
+    const payload: Partial<Product> = {};
+    onSubmit?.(payload);
   };
 
   return (

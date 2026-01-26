@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  let { pathname, search } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
 
   // Normalizar URLs con doble barra (//path -> /path)
   if (pathname.includes('//')) {

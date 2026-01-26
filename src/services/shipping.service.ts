@@ -1,8 +1,23 @@
 ﻿import api from '@/lib/api';
 
+void api;
+
 // ============================================
 // SERVICIOS DE ENVÍO
 // ============================================
+
+type ShippingOption = {
+  id: string;
+  label: string;
+  price: number;
+  etaDays?: number;
+};
+
+type TrackingStatus = {
+  status: string;
+  updatedAt?: string;
+  details?: string;
+};
 
 export const shippingService = {
   /**
@@ -18,7 +33,7 @@ export const shippingService = {
   /**
    * Obtener opciones de env�o
    */
-  async getShippingOptions(postalCode: string): Promise<any[]> {
+  async getShippingOptions(postalCode: string): Promise<ShippingOption[]> {
     // TODO: Integrar con API de env�o externa
     // return api.get('/shipping/options', { params: { postalCode } });
     console.log('Fetching shipping options for postal code:', postalCode);
@@ -28,7 +43,7 @@ export const shippingService = {
   /**
    * Obtener estado de seguimiento
    */
-  async getTrackingStatus(trackingNumber: string): Promise<any> {
+  async getTrackingStatus(trackingNumber: string): Promise<TrackingStatus | null> {
     // TODO: Integrar con API de env�o externa
     // return api.get(`/shipping/track/${trackingNumber}`);
     console.log('Fetching tracking status:', trackingNumber);
@@ -48,4 +63,3 @@ export const shippingService = {
     return { trackingNumber: '' };
   },
 };
-

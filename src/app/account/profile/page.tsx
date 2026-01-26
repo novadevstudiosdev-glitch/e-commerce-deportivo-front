@@ -7,12 +7,13 @@
 import { ProfileForm } from '@/components';
 import { useState } from 'react';
 import { useAuth } from '@/hooks';
+import type { UserProfile } from '@/types';
 
 export default function ProfilePage() {
   const { session } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: Partial<UserProfile>) => {
     setIsLoading(true);
     // TODO: Actualizar perfil
     console.log('Updating profile:', data);

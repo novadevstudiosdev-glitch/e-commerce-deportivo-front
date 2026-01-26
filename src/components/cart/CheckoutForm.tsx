@@ -4,12 +4,20 @@
 // CHECKOUT FORM - COMPONENTE (SKELETON)
 // ============================================
 
+import type { FormEvent } from 'react';
+
 interface CheckoutFormProps {
-  onSubmit?: (data: any) => void;
+  onSubmit?: (data: CheckoutFormData) => void;
 }
 
+type CheckoutFormData = {
+  name?: string;
+  email?: string;
+  address?: string;
+};
+
 export function CheckoutForm({ onSubmit }: CheckoutFormProps) {
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // TODO: Implementar validación con React Hook Form + Zod
     onSubmit?.({});

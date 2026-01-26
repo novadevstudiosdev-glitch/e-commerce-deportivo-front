@@ -10,13 +10,12 @@ import { OrdersTable } from '../common/OrdersTable';
 interface AdminOrdersBoardProps {
   orders: Order[];
   isLoading?: boolean;
-  onStatusChange?: (orderId: string, status: string) => void;
 }
 
-export function AdminOrdersBoard({ orders, isLoading, onStatusChange }: AdminOrdersBoardProps) {
+export function AdminOrdersBoard({ orders, isLoading }: AdminOrdersBoardProps) {
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold mb-4">Órdenes</h2>
+      <h2 className="text-xl font-semibold mb-4">Ordenes</h2>
       <OrdersTable orders={orders} isLoading={isLoading} />
     </div>
   );

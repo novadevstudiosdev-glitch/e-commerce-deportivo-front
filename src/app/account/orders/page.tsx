@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { Order } from '@/types';
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

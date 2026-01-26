@@ -1,7 +1,7 @@
 ﻿'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AuthTabs from '@/components/auth/AuthTabs';
 import AuthFormLogin from '@/components/auth/AuthFormLogin';
 import AuthFormRegister from '@/components/auth/AuthFormRegister';
@@ -25,13 +25,16 @@ type RegisterValues = {
 };
 
 function getErrorMessage(error: unknown) {
-  const err = error as any;
-  return err?.response?.data?.error || err?.message || 'No se pudo completar la solicitud';
+  if (error instanceof Error) return error.message;
+  return 'No se pudo completar la solicitud';
 }
 
 export default function AuthPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [registerMessage, setRegisterMessage] = useState<string | null>(null);
+  const [loginBanner, setLoginBanner] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setSession, setIsLoading } = useAuthStore();
 
   const handleLogin = async (data: LoginValues) => {
@@ -57,6 +60,7 @@ export default function AuthPage() {
 
   const handleRegister = async (data: RegisterValues) => {
     setIsLoading(true);
+    setRegisterMessage(null);
     try {
       const session = await authService.register({
         firstName: data.firstName,
@@ -66,21 +70,24 @@ export default function AuthPage() {
         phone: data.phone,
       });
       setSession(session);
-      await Swal.fire({
-        icon: 'success',
-        title: '¡Registro exitoso!',
-        text: 'Tu cuenta ha sido creada. Ahora inicia sesión.',
-        confirmButtonText: 'Aceptar',
-        confirmButtonColor: '#0ea5e9',
-        allowOutsideClick: false,
-      });
+      setRegisterMessage('Cuenta creada, revisa tu email (spam/promociones).');
       setMode('login');
+      router.push(`${ROUTES.AUTH_LOGIN}?registered=1`);
     } catch (error) {
       throw new Error(getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const registered = searchParams.get('registered');
+    if (registered) {
+      setLoginBanner('Cuenta creada. Ahora inicia sesion.');
+    } else {
+      setLoginBanner(null);
+    }
+  }, [searchParams]);
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -110,6 +117,19 @@ export default function AuthPage() {
               <AuthFormRegister onSubmit={handleRegister} />
             )}
           </div>
+
+          {mode === 'login' && loginBanner && (
+            <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              {loginBanner}
+            </div>
+          )}
+
+          {mode === 'register' && registerMessage && (
+            <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+              {registerMessage}
+            </div>
+          )}
+
         </div>
 
         {/* Panel derecho */}

@@ -1,6 +1,8 @@
 ﻿import api from '@/lib/api';
 import { AdminStats, Order, Product, Offer, OfferBanner } from '@/types';
 
+void api;
+
 // ============================================
 // SERVICIOS DE ADMINISTRADOR
 // ============================================

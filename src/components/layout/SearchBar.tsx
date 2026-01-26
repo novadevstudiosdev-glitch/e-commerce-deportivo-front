@@ -1,8 +1,7 @@
 ﻿'use client';
 
+import type { FormEvent } from 'react';
 import { useState } from 'react';
-import { ROUTES } from '@/lib/routes';
-import Link from 'next/link';
 
 // ============================================
 // SEARCH BAR - COMPONENTE
@@ -11,7 +10,7 @@ import Link from 'next/link';
 export function SearchBar() {
   const [query, setQuery] = useState('');
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (query.trim()) {
       // TODO: Redirigir a resultados de búsqueda

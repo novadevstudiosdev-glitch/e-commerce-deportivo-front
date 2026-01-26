@@ -54,5 +54,7 @@ export const authOptions = {
 export const handler = NextAuth(authOptions);
 */
 
-export default {};
+const authPlaceholder = {};
+
+export default authPlaceholder;
 
