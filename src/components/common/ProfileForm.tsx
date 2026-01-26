@@ -20,8 +20,8 @@ export function ProfileForm({ profile, onSubmit, isLoading }: ProfileFormProps) 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
-      <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="w-full max-w-2xl space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <input
           type="text"
           placeholder="Nombre"

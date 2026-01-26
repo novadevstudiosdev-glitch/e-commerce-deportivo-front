@@ -1,9 +1,11 @@
-﻿"use client";
+﻿'use client';
 
-import { useMemo, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
-import { Sora } from "next/font/google";
-import {  Box,
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useParams, useSearchParams } from 'next/navigation';
+import { Sora } from 'next/font/google';
+import {
+  Box,
   Button,
   Checkbox,
   Chip,
@@ -14,340 +16,51 @@ import {  Box,
   FormControlLabel,
   Grid,
   IconButton,
-  Paper,  Rating,
+  Paper,
+  Rating,
   Slider,
   Stack,
   TextField,
   Typography,
   useMediaQuery,
-} from "@mui/material";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import { useCart } from "@/hooks";
+} from '@mui/material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import { useCart } from '@/hooks';
+import { productsService, ProductPublic } from '@/services/products.service';
+import { buildProductSlug, capitalize, slugify } from '@/lib/utils';
+import { ROUTES } from '@/lib/routes';
 
 const sora = Sora({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
 });
 
 type Product = {
   id: string;
   name: string;
+  slug?: string;
   brand: string;
   categories: string[];
   price: number;
   oldPrice?: number;
   discount?: number;
+  isFeatured?: boolean;
   rating: number;
   reviews: number;
   sizes: string[];
   image: string;
 };
 
-const BRANDS = ["Nike", "Adidas", "Puma", "Reebok", "Under Armour"];
-const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
-
-const PRODUCTS: Product[] = [
-  {
-    id: "p1",
-    name: "Zapatillas Running Pro Max",
-    brand: "Nike",
-    categories: ["calzado", "hombre"],
-    price: 89.99,
-    oldPrice: 119.99,
-    discount: 25,
-    rating: 4.6,
-    reviews: 128,
-    sizes: ["M", "L", "XL"],
-    image: "/zapatillas%20running.avif",
-  },
-  {
-    id: "p2",
-    name: "Camiseta Tecnica Dry-Fit",
-    brand: "Adidas",
-    categories: ["ropa", "hombre"],
-    price: 34.99,
-    oldPrice: 49.99,
-    discount: 30,
-    rating: 4.5,
-    reviews: 256,
-    sizes: ["S", "M", "L", "XL"],
-    image: "/remeraTecnica.jpg",
-  },
-  {
-    id: "p3",
-    name: "Pantalon Deportivo Flex",
-    brand: "Puma",
-    categories: ["ropa", "hombre"],
-    price: 49.99,
-    oldPrice: 69.99,
-    discount: 29,
-    rating: 4.4,
-    reviews: 89,
-    sizes: ["M", "L", "XL"],
-    image: "https://source.unsplash.com/600x600/?sports-pants",
-  },
-  {
-    id: "p4",
-    name: "Chaqueta Cortaviento Trail",
-    brand: "Reebok",
-    categories: ["ropa", "hombre"],
-    price: 79.99,
-    oldPrice: 99.99,
-    discount: 20,
-    rating: 4.3,
-    reviews: 145,
-    sizes: ["M", "L", "XL"],
-    image: "https://source.unsplash.com/600x600/?sports-jacket",
-  },
-  {
-    id: "p5",
-    name: "Mochila Deportiva 30L",
-    brand: "Under Armour",
-    categories: ["accesorios"],
-    price: 39.99,
-    oldPrice: 54.99,
-    discount: 27,
-    rating: 4.2,
-    reviews: 203,
-    sizes: [],
-    image: "/mochilaDeportiva.avif",
-  },
-  {
-    id: "p6",
-    name: "Calcetines Running Pack 3",
-    brand: "Nike",
-    categories: ["accesorios"],
-    price: 14.99,
-    oldPrice: 19.99,
-    discount: 25,
-    rating: 4.1,
-    reviews: 312,
-    sizes: ["S", "M", "L"],
-    image: "https://source.unsplash.com/600x600/?running-socks",
-  },
-  {
-    id: "p7",
-    name: "Gorra Deportiva Ajustable",
-    brand: "Adidas",
-    categories: ["accesorios"],
-    price: 19.99,
-    oldPrice: 24.99,
-    discount: 20,
-    rating: 4.5,
-    reviews: 167,
-    sizes: [],
-    image: "https://source.unsplash.com/600x600/?sport-cap",
-  },
-  {
-    id: "p8",
-    name: "Sudadera con Capucha",
-    brand: "Puma",
-    categories: ["ropa", "mujer"],
-    price: 59.99,
-    oldPrice: 79.99,
-    discount: 25,
-    rating: 4.6,
-    reviews: 421,
-    sizes: ["S", "M", "L", "XL"],
-    image: "https://source.unsplash.com/600x600/?hoodie",
-  },
-  {
-    id: "p9",
-    name: "Leggings Training High-Rise",
-    brand: "Nike",
-    categories: ["ropa", "mujer"],
-    price: 44.99,
-    oldPrice: 59.99,
-    discount: 25,
-    rating: 4.7,
-    reviews: 298,
-    sizes: ["XS", "S", "M", "L"],
-    image: "https://source.unsplash.com/600x600/?leggings",
-  },
-  {
-    id: "p10",
-    name: "Top Deportivo Seamless",
-    brand: "Adidas",
-    categories: ["ropa", "mujer"],
-    price: 29.99,
-    rating: 4.3,
-    reviews: 118,
-    sizes: ["XS", "S", "M", "L"],
-    image: "https://source.unsplash.com/600x600/?sports-bra",
-  },
-  {
-    id: "p11",
-    name: "Zapatillas Urban Motion",
-    brand: "Reebok",
-    categories: ["calzado", "mujer"],
-    price: 84.99,
-    oldPrice: 99.99,
-    discount: 15,
-    rating: 4.2,
-    reviews: 92,
-    sizes: ["S", "M", "L", "XL"],
-    image: "https://source.unsplash.com/600x600/?sneakers",
-  },
-  {
-    id: "p12",
-    name: "Short Running UltraLight",
-    brand: "Under Armour",
-    categories: ["ropa", "hombre"],
-    price: 32.99,
-    rating: 4.1,
-    reviews: 76,
-    sizes: ["S", "M", "L", "XL"],
-    image: "https://source.unsplash.com/600x600/?running-shorts",
-  },
-  {
-    id: "p13",
-    name: "Campera Termica Pro",
-    brand: "Puma",
-    categories: ["ropa", "hombre"],
-    price: 69.99,
-    oldPrice: 89.99,
-    discount: 22,
-    rating: 4.4,
-    reviews: 64,
-    sizes: ["M", "L", "XL"],
-    image: "https://source.unsplash.com/600x600/?puffer-jacket",
-  },
-  {
-    id: "p14",
-    name: "Balon Futbol Match",
-    brand: "Adidas",
-    categories: ["accesorios"],
-    price: 24.99,
-    rating: 4.5,
-    reviews: 59,
-    sizes: [],
-    image: "https://source.unsplash.com/600x600/?soccer-ball",
-  },
-  {
-    id: "p15",
-    name: "Guantes Entrenamiento Grip",
-    brand: "Nike",
-    categories: ["accesorios"],
-    price: 18.99,
-    rating: 4.2,
-    reviews: 84,
-    sizes: ["S", "M", "L"],
-    image: "https://source.unsplash.com/600x600/?training-gloves",
-  },
-  {
-    id: "p16",
-    name: "Botella Hidratacion 1L",
-    brand: "Reebok",
-    categories: ["accesorios"],
-    price: 12.99,
-    rating: 4.0,
-    reviews: 103,
-    sizes: [],
-    image: "https://source.unsplash.com/600x600/?water-bottle",
-  },
-  {
-    id: "p17",
-    name: "Set Bandas Elasticos",
-    brand: "Under Armour",
-    categories: ["accesorios"],
-    price: 21.99,
-    rating: 4.3,
-    reviews: 140,
-    sizes: [],
-    image: "https://source.unsplash.com/600x600/?resistance-bands",
-  },
-  {
-    id: "p18",
-    name: "Zapatillas Trail Xtreme",
-    brand: "Adidas",
-    categories: ["calzado", "hombre"],
-    price: 99.99,
-    oldPrice: 129.99,
-    discount: 23,
-    rating: 4.6,
-    reviews: 177,
-    sizes: ["M", "L", "XL"],
-    image: "https://source.unsplash.com/600x600/?trail-running-shoes",
-  },
-  {
-    id: "p19",
-    name: "Jogger Performance",
-    brand: "Nike",
-    categories: ["ropa", "hombre"],
-    price: 54.99,
-    oldPrice: 69.99,
-    discount: 21,
-    rating: 4.4,
-    reviews: 97,
-    sizes: ["S", "M", "L", "XL"],
-    image: "/jogger%20training.webp",
-  },
-  {
-    id: "p20",
-    name: "Camiseta Manga Larga Run",
-    brand: "Reebok",
-    categories: ["ropa", "mujer"],
-    price: 39.99,
-    rating: 4.2,
-    reviews: 73,
-    sizes: ["S", "M", "L"],
-    image: "https://source.unsplash.com/600x600/?long-sleeve-shirt",
-  },
-  {
-    id: "p21",
-    name: "Shorts Ciclista Compresion",
-    brand: "Adidas",
-    categories: ["ropa", "mujer"],
-    price: 27.99,
-    rating: 4.1,
-    reviews: 54,
-    sizes: ["XS", "S", "M", "L"],
-    image: "https://source.unsplash.com/600x600/?cycling-shorts",
-  },
-  {
-    id: "p22",
-    name: "Chamarra Ligera Wind",
-    brand: "Under Armour",
-    categories: ["ropa", "mujer"],
-    price: 64.99,
-    oldPrice: 79.99,
-    discount: 19,
-    rating: 4.3,
-    reviews: 62,
-    sizes: ["S", "M", "L", "XL"],
-    image: "https://source.unsplash.com/600x600/?windbreaker",
-  },
-  {
-    id: "p23",
-    name: "Zapatos Training Core",
-    brand: "Puma",
-    categories: ["calzado", "hombre"],
-    price: 74.99,
-    rating: 4.2,
-    reviews: 81,
-    sizes: ["M", "L", "XL"],
-    image: "https://source.unsplash.com/600x600/?gym-shoes",
-  },
-  {
-    id: "p24",
-    name: "Hoodie Essential Sport",
-    brand: "Nike",
-    categories: ["ropa", "hombre"],
-    price: 58.99,
-    rating: 4.5,
-    reviews: 119,
-    sizes: ["S", "M", "L", "XL"],
-    image: "https://source.unsplash.com/600x600/?sports-hoodie",
-  },
-];
+const BRANDS = ['Nike', 'Adidas', 'Puma', 'Reebok', 'Under Armour'];
+const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
 const theme = createTheme({
   palette: {
-    primary: { main: "#1E88E5" },
-    background: { default: "#F6F7FB" },
+    primary: { main: '#1E88E5' },
+    background: { default: '#F6F7FB' },
   },
   shape: {
     borderRadius: 16,
@@ -359,7 +72,7 @@ const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          textTransform: "none",
+          textTransform: 'none',
           fontWeight: 700,
           borderRadius: 12,
         },
@@ -379,50 +92,141 @@ function formatPrice(value: number) {
   return `$${value.toFixed(2)}`;
 }
 
+function mapToCatalogProduct(product: ProductPublic): Product {
+  const categoryName = product.category || 'general';
+  const categorySlug = slugify(categoryName) || 'general';
+
+  const image =
+    product.images && product.images.length > 0 ? product.images[0] : '/placeholder.png';
+
+  const isFeatured = product.is_featured;
+
+  return {
+    id: product.id,
+    name: product.name,
+    slug: buildProductSlug(product.name, product.id),
+    brand: capitalize(categorySlug),
+    categories: [categorySlug],
+    price: Number(product.price),
+    discount: isFeatured ? 10 : undefined,
+    isFeatured,
+    rating: 0,
+    reviews: 0,
+    sizes: [],
+    image,
+  };
+}
+
 function getDiscountLabel(product: Product) {
   if (product.discount) return `-${product.discount}%`;
   if (product.oldPrice && product.oldPrice > product.price) {
     const pct = Math.round((1 - product.price / product.oldPrice) * 100);
     return `-${pct}%`;
   }
+  if (product.isFeatured) return 'Destacado';
   return null;
 }
 
 export default function ProductCatalogPage() {
   const { addItem } = useCart();
-  const params = useParams();
+
+  // ✅ SIN any: tipamos params
+  const params = useParams<{ slug?: string; category?: string }>();
   const searchParams = useSearchParams();
-  const categoryFromQuery = searchParams.get("category")?.toLowerCase() ?? "";
+
+  const categoryFromQuery = (searchParams.get('category') ?? '').toLowerCase();
+
   const categoryFromRoute =
-    typeof params?.slug === "string"
+    typeof params.slug === 'string'
       ? params.slug.toLowerCase()
-      : typeof params?.category === "string"
+      : typeof params.category === 'string'
         ? params.category.toLowerCase()
-        : "";
+        : '';
+
   const activeCategory = categoryFromQuery || categoryFromRoute;
 
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadProducts = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // ✅ Traer TODOS los productos (250)
+        const all = await productsService.getAllProducts({ sort: 'newest' });
+        console.log('TOTAL TRAIDOS:', all.length);
+
+        if (!isMounted) return;
+        setProducts(all.map(mapToCatalogProduct));
+      } catch (err) {
+        console.error('Error cargando products desde Supabase:', err);
+        if (!isMounted) return;
+        setProducts([]);
+        setError('No se pudieron cargar los productos.');
+      } finally {
+        if (!isMounted) return;
+        setIsLoading(false);
+      }
+    };
+
+    loadProducts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const priceBounds = useMemo(() => {
-    const prices = PRODUCTS.map((p) => p.price);
+    if (products.length === 0) return { min: 0, max: 0 };
+    const prices = products.map((p) => p.price);
     return {
       min: Math.floor(Math.min(...prices)),
       max: Math.ceil(Math.max(...prices)),
     };
-  }, []);
+  }, [products]);
 
   const [tempMin, setTempMin] = useState(priceBounds.min);
   const [tempMax, setTempMax] = useState(priceBounds.max);
   const [priceMin, setPriceMin] = useState(priceBounds.min);
   const [priceMax, setPriceMax] = useState(priceBounds.max);
+
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  const brands = useMemo(() => {
+    const derived = Array.from(new Set(products.map((product) => product.brand))).sort();
+    return derived.length > 0 ? derived : BRANDS;
+  }, [products]);
+
+  const sizes = useMemo(() => {
+    const derived = Array.from(new Set(products.flatMap((product) => product.sizes))).sort();
+    return derived.length > 0 ? derived : SIZES;
+  }, [products]);
+
+  const hasSizes = sizes.length > 0;
+
+  useEffect(() => {
+    setTempMin(priceBounds.min);
+    setTempMax(priceBounds.max);
+    setPriceMin(priceBounds.min);
+    setPriceMax(priceBounds.max);
+  }, [priceBounds.min, priceBounds.max]);
+
   const filteredProducts = useMemo(() => {
-    return PRODUCTS.filter((product) => {
+    return products.filter((product) => {
       if (activeCategory) {
-        if (activeCategory === "ofertas") {
+        if (activeCategory === 'ofertas') {
           const hasDiscount =
             Boolean(product.discount) ||
+            Boolean(product.isFeatured) ||
             (product.oldPrice && product.oldPrice > product.price);
           if (!hasDiscount) return false;
         } else if (!product.categories.includes(activeCategory)) {
@@ -434,7 +238,7 @@ export default function ProductCatalogPage() {
         return false;
       }
 
-      if (selectedSizes.length > 0) {
+      if (hasSizes && selectedSizes.length > 0) {
         const hasSize = product.sizes.some((size) => selectedSizes.includes(size));
         if (!hasSize) return false;
       }
@@ -445,7 +249,7 @@ export default function ProductCatalogPage() {
 
       return true;
     });
-  }, [activeCategory, priceMin, priceMax, selectedBrands, selectedSizes]);
+  }, [activeCategory, hasSizes, priceMin, priceMax, products, selectedBrands, selectedSizes]);
 
   const toggleBrand = (brand: string) => {
     setSelectedBrands((prev) =>
@@ -465,12 +269,14 @@ export default function ProductCatalogPage() {
   };
 
   const handleAddToCart = (product: Product) => {
-    const primaryCategory = product.categories[0] || "general";
+    const primaryCategory = product.categories[0] || 'general';
+    const slug = product.slug ?? buildProductSlug(product.name, product.id);
+
     addItem(
       {
         id: product.id,
         name: product.name,
-        slug: product.id,
+        slug,
         description: product.name,
         price: product.price,
         originalPrice: product.oldPrice,
@@ -490,14 +296,7 @@ export default function ProductCatalogPage() {
   };
 
   const sidebarContent = (
-    <Paper
-      variant="outlined"
-      sx={{
-        borderColor: "#E5E7EB",
-        p: 2,
-        bgcolor: "#fff",
-      }}
-    >
+    <Paper variant="outlined" sx={{ borderColor: '#E5E7EB', p: 2, bgcolor: '#fff' }}>
       <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
         Filtros
       </Typography>
@@ -506,6 +305,7 @@ export default function ProductCatalogPage() {
         <Typography variant="subtitle2" fontWeight={700}>
           Rango de Precio
         </Typography>
+
         <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
           <TextField
             label="Minimo"
@@ -524,7 +324,8 @@ export default function ProductCatalogPage() {
             fullWidth
           />
         </Stack>
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: "block" }}>
+
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
           Minimo
         </Typography>
         <Slider
@@ -534,7 +335,8 @@ export default function ProductCatalogPage() {
           onChange={(_, value) => setTempMin(Math.min(value as number, tempMax))}
           sx={{ mt: 0.5 }}
         />
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
           Maximo
         </Typography>
         <Slider
@@ -544,10 +346,11 @@ export default function ProductCatalogPage() {
           onChange={(_, value) => setTempMax(Math.max(value as number, tempMin))}
           sx={{ mt: 0.5 }}
         />
+
         <Button
           variant="contained"
           fullWidth
-          sx={{ mt: 2, bgcolor: "#0F2A3D", "&:hover": { bgcolor: "#0B2233" } }}
+          sx={{ mt: 2, bgcolor: '#0F2A3D', '&:hover': { bgcolor: '#0B2233' } }}
           onClick={applyPrice}
         >
           Aplicar Precio
@@ -556,70 +359,67 @@ export default function ProductCatalogPage() {
 
       <Divider sx={{ my: 2 }} />
 
-      <Box>
-        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
-          Marcas
-        </Typography>
-        <Stack spacing={0.5}>
-          {BRANDS.map((brand) => (
-            <FormControlLabel
-              key={brand}
-              control={
-                <Checkbox
-                  size="small"
-                  checked={selectedBrands.includes(brand)}
-                  onChange={() => toggleBrand(brand)}
-                />
-              }
-              label={
-                <Typography variant="body2" color="text.secondary">
-                  {brand}
-                </Typography>
-              }
-            />
-          ))}
-        </Stack>
-      </Box>
+      {brands.length > 0 && (
+        <Box>
+          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+            Marcas
+          </Typography>
+          <Stack spacing={0.5}>
+            {brands.map((brand) => (
+              <FormControlLabel
+                key={brand}
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={selectedBrands.includes(brand)}
+                    onChange={() => toggleBrand(brand)}
+                  />
+                }
+                label={
+                  <Typography variant="body2" color="text.secondary">
+                    {brand}
+                  </Typography>
+                }
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
 
       <Divider sx={{ my: 2 }} />
 
-      <Box>
-        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
-          Tallas
-        </Typography>
-        <Stack direction="row" flexWrap="wrap" gap={1}>
-          {SIZES.map((size) => (
-            <Chip
-              key={size}
-              label={size}
-              variant={selectedSizes.includes(size) ? "filled" : "outlined"}
-              color={selectedSizes.includes(size) ? "primary" : "default"}
-              onClick={() => toggleSize(size)}
-              size="small"
-              sx={{ fontWeight: 600 }}
-            />
-          ))}
-        </Stack>
-      </Box>
+      {hasSizes && (
+        <Box>
+          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+            Tallas
+          </Typography>
+          <Stack direction="row" flexWrap="wrap" gap={1}>
+            {sizes.map((size) => (
+              <Chip
+                key={size}
+                label={size}
+                variant={selectedSizes.includes(size) ? 'filled' : 'outlined'}
+                color={selectedSizes.includes(size) ? 'primary' : 'default'}
+                onClick={() => toggleSize(size)}
+                size="small"
+                sx={{ fontWeight: 600 }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
     </Paper>
   );
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box className={sora.className} sx={{ bgcolor: "#F6F7FB", minHeight: "100vh", pb: 6 }}>
-        <Container
-          maxWidth={false}
-          sx={{
-            maxWidth: 1320,
-            px: { xs: 2, md: 3 },
-            pt: 3,
-          }}
-        >
+      <Box className={sora.className} sx={{ bgcolor: '#F6F7FB', minHeight: '100vh', pb: 6 }}>
+        <Container maxWidth={false} sx={{ maxWidth: 1320, px: { xs: 2, md: 3 }, pt: 3 }}>
           <Stack
-            direction={{ xs: "column", sm: "row" }}
+            direction={{ xs: 'column', sm: 'row' }}
             spacing={2}
-            alignItems={{ xs: "flex-start", sm: "center" }}
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
             justifyContent="space-between"
             sx={{ mb: 2 }}
           >
@@ -628,7 +428,9 @@ export default function ProductCatalogPage() {
                 Catalogo de Productos
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {filteredProducts.length} productos encontrados
+                {isLoading
+                  ? 'Cargando productos...'
+                  : `${filteredProducts.length} productos encontrados`}
               </Typography>
             </Box>
 
@@ -641,159 +443,189 @@ export default function ProductCatalogPage() {
                 >
                   Filtros
                 </Button>
-              )}            </Stack>
+              )}
+            </Stack>
           </Stack>
 
           <Box
             sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", md: "280px 1fr" },
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '280px 1fr' },
               gap: 3,
-              alignItems: "start",
+              alignItems: 'start',
             }}
           >
             {!isMobile && <Box>{sidebarContent}</Box>}
 
             <Box>
-              <Grid container spacing={2}>
-                {filteredProducts.map((product) => {
-                  const discountLabel = getDiscountLabel(product);
-                  return (
-                    <Grid item xs={12} sm={6} lg={3} key={product.id}>
-                      <Paper
-                        elevation={0}
-                        sx={{
-                          p: 2,
-                          borderRadius: 2,
-                          border: "1px solid #E5E7EB",
-                          boxShadow: "0 4px 12px rgba(15, 23, 42, 0.08)",
-                          transition: "all 220ms ease",
-                          "&:hover": {
-                            transform: "translateY(-4px)",
-                            boxShadow: "0 10px 24px rgba(15, 23, 42, 0.14)",
-                          },
-                        }}
-                      >
-                        <Box
+              {error && (
+                <Typography variant="body2" color="error" sx={{ mb: 2 }}>
+                  {error}
+                </Typography>
+              )}
+
+              {isLoading ? (
+                <Typography variant="body2" color="text.secondary">
+                  Cargando productos...
+                </Typography>
+              ) : filteredProducts.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No hay productos disponibles.
+                </Typography>
+              ) : (
+                <Grid container spacing={2}>
+                  {filteredProducts.map((product) => {
+                    const discountLabel = getDiscountLabel(product);
+                    const detailHref = ROUTES.PRODUCT_DETAIL(
+                      product.slug ?? buildProductSlug(product.name, product.id)
+                    );
+
+                    return (
+                      <Grid item xs={12} sm={6} lg={3} key={product.id}>
+                        <Paper
+                          elevation={0}
                           sx={{
-                            position: "relative",
-                            bgcolor: "#F1F3F6",
+                            p: 2,
                             borderRadius: 2,
-                            height: 180,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            overflow: "hidden",
+                            border: '1px solid #E5E7EB',
+                            boxShadow: '0 4px 12px rgba(15, 23, 42, 0.08)',
+                            transition: 'all 220ms ease',
+                            '&:hover': {
+                              transform: 'translateY(-4px)',
+                              boxShadow: '0 10px 24px rgba(15, 23, 42, 0.14)',
+                            },
                           }}
                         >
-                          {discountLabel && (
-                            <Chip
-                              label={discountLabel}
+                          <Box
+                            sx={{
+                              position: 'relative',
+                              bgcolor: '#F1F3F6',
+                              borderRadius: 2,
+                              height: 180,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            {discountLabel && (
+                              <Chip
+                                label={discountLabel}
+                                size="small"
+                                sx={{
+                                  position: 'absolute',
+                                  top: 10,
+                                  left: 10,
+                                  bgcolor: '#2E7D32',
+                                  color: '#fff',
+                                  fontWeight: 700,
+                                }}
+                              />
+                            )}
+
+                            <IconButton
                               size="small"
                               sx={{
-                                position: "absolute",
-                                top: 10,
-                                left: 10,
-                                bgcolor: "#2E7D32",
-                                color: "#fff",
-                                fontWeight: 700,
+                                position: 'absolute',
+                                top: 8,
+                                right: 8,
+                                bgcolor: '#fff',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                                '&:hover': { bgcolor: '#fff' },
                               }}
+                            >
+                              <FavoriteBorderIcon fontSize="small" />
+                            </IconButton>
+
+                            <Box
+                              component="img"
+                              src={product.image}
+                              alt={product.name}
+                              sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
                             />
-                          )}
-                          <IconButton
-                            size="small"
-                            sx={{
-                              position: "absolute",
-                              top: 8,
-                              right: 8,
-                              bgcolor: "#fff",
-                              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-                              "&:hover": { bgcolor: "#fff" },
-                            }}
-                          >
-                            <FavoriteBorderIcon fontSize="small" />
-                          </IconButton>
-                          <Box
-                            component="img"
-                            src={product.image}
-                            alt={product.name}
-                            sx={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "contain",
-                            }}
-                          />
-                        </Box>
+                          </Box>
 
-                        <Box sx={{ mt: 2 }}>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ textTransform: "uppercase", fontWeight: 700 }}
-                          >
-                            {product.brand}
-                          </Typography>
-                          <Typography
-                            variant="subtitle1"
-                            sx={{
-                              fontWeight: 700,
-                              mt: 0.5,
-                              minHeight: 44,
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                            }}
-                          >
-                            {product.name}
-                          </Typography>
-                          <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.5 }}>
-                            <Rating value={product.rating} precision={0.1} readOnly size="small" />
-                            <Typography variant="caption" color="text.secondary">
-                              ({product.reviews})
+                          <Box sx={{ mt: 2 }}>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ textTransform: 'uppercase', fontWeight: 700 }}
+                            >
+                              {product.brand}
                             </Typography>
-                          </Stack>
-                          <Stack direction="row" spacing={1} alignItems="baseline" sx={{ mt: 1 }}>
-                            <Typography variant="subtitle1" sx={{ color: "#1E88E5", fontWeight: 800 }}>
-                              {formatPrice(product.price)}
-                            </Typography>
-                            {product.oldPrice && (
+
+                            <Link href={detailHref} className="no-underline">
                               <Typography
-                                variant="caption"
-                                sx={{ color: "#94A3B8", textDecoration: "line-through" }}
+                                variant="subtitle1"
+                                sx={{
+                                  fontWeight: 700,
+                                  mt: 0.5,
+                                  minHeight: 44,
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  color: 'inherit',
+                                }}
                               >
-                                {formatPrice(product.oldPrice)}
+                                {product.name}
                               </Typography>
-                            )}
-                          </Stack>
+                            </Link>
 
-                          {product.sizes.length > 0 && (
-                            <Stack direction="row" spacing={0.5} sx={{ mt: 1, flexWrap: "wrap" }}>
-                              {product.sizes.map((size) => (
-                                <Chip key={size} label={size} size="small" variant="outlined" />
-                              ))}
+                            <Stack
+                              direction="row"
+                              spacing={0.5}
+                              alignItems="center"
+                              sx={{ mt: 0.5 }}
+                            >
+                              <Rating
+                                value={product.rating}
+                                precision={0.1}
+                                readOnly
+                                size="small"
+                              />
+                              <Typography variant="caption" color="text.secondary">
+                                ({product.reviews})
+                              </Typography>
                             </Stack>
-                          )}
 
-                          <Button
-                            variant="contained"
-                            fullWidth
-                            startIcon={<ShoppingCartIcon />}
-                            sx={{
-                              mt: 1.5,
-                              bgcolor: "#1E88E5",
-                              "&:hover": { bgcolor: "#1565C0" },
-                            }}
-                            onClick={() => handleAddToCart(product)}
-                          >
-                            Anadir al carrito
-                          </Button>
-                        </Box>
-                      </Paper>
-                    </Grid>
-                  );
-                })}
-              </Grid>
+                            <Stack direction="row" spacing={1} alignItems="baseline" sx={{ mt: 1 }}>
+                              <Typography
+                                variant="subtitle1"
+                                sx={{ color: '#1E88E5', fontWeight: 800 }}
+                              >
+                                {formatPrice(product.price)}
+                              </Typography>
+                              {product.oldPrice && (
+                                <Typography
+                                  variant="caption"
+                                  sx={{ color: '#94A3B8', textDecoration: 'line-through' }}
+                                >
+                                  {formatPrice(product.oldPrice)}
+                                </Typography>
+                              )}
+                            </Stack>
+
+                            <Button
+                              variant="contained"
+                              fullWidth
+                              startIcon={<ShoppingCartIcon />}
+                              sx={{
+                                mt: 1.5,
+                                bgcolor: '#1E88E5',
+                                '&:hover': { bgcolor: '#1565C0' },
+                              }}
+                              onClick={() => handleAddToCart(product)}
+                            >
+                              Anadir al carrito
+                            </Button>
+                          </Box>
+                        </Paper>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              )}
             </Box>
           </Box>
         </Container>
@@ -803,10 +635,10 @@ export default function ProductCatalogPage() {
         anchor="left"
         open={filtersOpen}
         onClose={() => setFiltersOpen(false)}
-        PaperProps={{ sx: { p: 2, width: 300, bgcolor: "#F6F7FB" } }}
+        PaperProps={{ sx: { p: 2, width: 300, bgcolor: '#F6F7FB' } }}
       >
         {sidebarContent}
-      </Drawer>    </ThemeProvider>
+      </Drawer>
+    </ThemeProvider>
   );
 }
-

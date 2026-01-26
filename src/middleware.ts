@@ -15,6 +15,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/admin')) {
+    let target = '/account/profile';
+    if (pathname.startsWith('/dashboard/profile')) target = '/account/profile';
+    if (pathname.startsWith('/dashboard/orders')) target = '/account/orders';
+    if (pathname.startsWith('/dashboard/settings')) target = '/account/preferences';
+    if (pathname.startsWith('/dashboard/favorites')) target = '/account/preferences';
+    const url = new URL(target + search, request.url);
+    return NextResponse.redirect(url);
+  }
+
   return NextResponse.next();
 }
 

@@ -28,7 +28,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/categories" className="hover:text-sky-600">
-                  Categor�as
+                  Categorias
                 </Link>
               </li>
               <li>
@@ -50,7 +50,7 @@ export default function Footer() {
             <ul className="mt-4 space-y-2 text-sm text-slate-600">
               <li>
                 <Link href="/login" className="hover:text-sky-600">
-                  Iniciar sesi�n
+                  Iniciar sesión
                 </Link>
               </li>
               <li>
@@ -59,7 +59,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/account" className="hover:text-sky-600">
+                <Link href="/account/profile" className="hover:text-sky-600">
                   Mi cuenta
                 </Link>
               </li>
@@ -82,7 +82,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="#" className="hover:text-sky-600">
-                  Env�os
+                  Envios
                 </Link>
               </li>
               <li>
@@ -92,7 +92,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="#" className="hover:text-sky-600">
-                  T�rminos y condiciones
+                  Términos y condiciones
                 </Link>
               </li>
             </ul>
@@ -111,11 +111,10 @@ export default function Footer() {
           <div className="flex items-center gap-4 text-slate-500">
             <span className="text-xs">Argentina</span>
             <span className="h-1 w-1 rounded-full bg-slate-400" />
-            <span className="text-xs">Espa�ol</span>
+            <span className="text-xs">Español</span>
           </div>
         </div>
       </div>
     </footer>
   );
 }
-

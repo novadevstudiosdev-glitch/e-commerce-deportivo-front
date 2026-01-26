@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { productsService, ProductPublic } from "@/services/products.service";
+import { buildProductSlug, formatCurrency } from "@/lib/utils";
 
 type Slide = {
   title: string;
@@ -67,7 +69,7 @@ const FEATURED: FeaturedProduct[] = [
     price: "$ 129.999,00",
     badge: "Oferta",
     image: "/zapatillas%20running.avif",
-    href: "/products/p1",
+    href: "/products",
   },
   {
     id: "p2",
@@ -75,7 +77,7 @@ const FEATURED: FeaturedProduct[] = [
     category: "ROPA",
     price: "$ 34.999,00",
     image: "/remeraTecnica.jpg",
-    href: "/products/p2",
+    href: "/products",
   },
   {
     id: "p3",
@@ -84,7 +86,7 @@ const FEATURED: FeaturedProduct[] = [
     price: "$ 59.999,00",
     badge: "Nuevo",
     image: "/jogger%20training.webp",
-    href: "/products/p3",
+    href: "/products",
   },
   {
     id: "p4",
@@ -92,11 +94,55 @@ const FEATURED: FeaturedProduct[] = [
     category: "ACCESORIOS",
     price: "$ 79.999,00",
     image: "/mochilaDeportiva.avif",
-    href: "/products/p4",
+    href: "/products",
   },
 ];
 
+function mapToFeatured(product: ProductPublic): FeaturedProduct {
+  const image =
+    product.images && product.images.length > 0 ? product.images[0] : "/placeholder.png";
+  return {
+    id: product.id,
+    title: product.name,
+    category: (product.category || "producto").toUpperCase(),
+    price: formatCurrency(Number(product.price), product.currency || "ARS"),
+    badge: product.is_featured ? "Oferta" : undefined,
+    image,
+    href: `/products/${buildProductSlug(product.name, product.id)}`,
+  };
+}
+
 export default function HomePage() {
+  const [featured, setFeatured] = useState<FeaturedProduct[]>(FEATURED);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadFeatured = async () => {
+      try {
+        const response = await productsService.getProducts({ limit: 50, sort: "newest" });
+        let items = response.data.filter((item) => item.is_featured);
+        if (items.length === 0) {
+          items = response.data.slice(0, 4);
+        } else {
+          items = items.slice(0, 4);
+        }
+
+        if (!isMounted) return;
+        setFeatured(items.map(mapToFeatured));
+      } catch (err) {
+        if (!isMounted) return;
+        setFeatured(FEATURED);
+      }
+    };
+
+    loadFeatured();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <div className="bg-white">
       <HeroCarousel />
@@ -158,7 +204,7 @@ export default function HomePage() {
           </div>
 
           <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {FEATURED.map((p) => (
+            {featured.map((p) => (
               <Link
                 key={p.id}
                 href={p.href}
