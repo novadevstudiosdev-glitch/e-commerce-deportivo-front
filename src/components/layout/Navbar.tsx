@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '@/store';
 import { useCart } from '@/hooks';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Swal from 'sweetalert2';
 
 type CategoryCard = {
@@ -44,11 +44,31 @@ export function Navbar() {
   const { totalItems } = useCart();
   const [isClient, setIsClient] = useState(false);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isAuthPage = pathname === '/login' || pathname === '/register';
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  useEffect(() => {
+    if (pathname === '/products') {
+      setSearchTerm(searchParams.get('search') ?? '');
+    } else {
+      setSearchTerm('');
+    }
+  }, [pathname, searchParams]);
+
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const value = searchTerm.trim();
+    if (!value) {
+      router.push('/products');
+      return;
+    }
+    router.push(`/products?search=${encodeURIComponent(value)}`);
+  };
 
   const handleLogout = async () => {
     const result = await Swal.fire({
@@ -176,13 +196,18 @@ export function Navbar() {
 
         {/* Search */}
         <div className="mx-auto hidden w-full max-w-xl md:block">
-          <div className="flex items-center gap-2 rounded-full border border-black/10 bg-black/[0.02] px-4 py-2">
+          <form
+            onSubmit={handleSearchSubmit}
+            className="flex items-center gap-2 rounded-full border border-black/10 bg-black/[0.02] px-4 py-2"
+          >
             <SearchIcon className="h-4 w-4 text-black/40" />
             <input
               className="w-full bg-transparent text-sm text-black/80 placeholder:text-black/40 focus:outline-none"
               placeholder="Buscar productos..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
             />
-          </div>
+          </form>
         </div>
 
         {/* Right actions */}
@@ -228,18 +253,32 @@ export function Navbar() {
                     </div>
                     <div className="my-2 h-px bg-black/5" />
                     <Link
-                      href="/dashboard"
+                      href="/account/profile"
                       className="block rounded-xl px-3 py-2 text-sm text-black/70 hover:bg-black/5"
                       onClick={() => setProfileOpen(false)}
                     >
-                      Mi cuenta
+                      Mi perfil
                     </Link>
                     <Link
-                      href="/dashboard/orders"
+                      href="/account/orders"
                       className="block rounded-xl px-3 py-2 text-sm text-black/70 hover:bg-black/5"
                       onClick={() => setProfileOpen(false)}
                     >
-                      Mis compras
+                      Mis pedidos
+                    </Link>
+                    <Link
+                      href="/account/addresses"
+                      className="block rounded-xl px-3 py-2 text-sm text-black/70 hover:bg-black/5"
+                      onClick={() => setProfileOpen(false)}
+                    >
+                      Direcciones
+                    </Link>
+                    <Link
+                      href="/account/preferences"
+                      className="block rounded-xl px-3 py-2 text-sm text-black/70 hover:bg-black/5"
+                      onClick={() => setProfileOpen(false)}
+                    >
+                      Preferencias
                     </Link>
                     {session?.isAdmin && (
                       <Link
@@ -287,12 +326,35 @@ export function Navbar() {
 
       {/* Mobile search (opcional) */}
       <div className="px-4 pb-3 md:hidden">
-        <div className="flex items-center gap-2 rounded-full border border-black/10 bg-black/[0.02] px-4 py-2">
+        <form
+          onSubmit={handleSearchSubmit}
+          className="flex items-center gap-2 rounded-full border border-black/10 bg-black/[0.02] px-4 py-2"
+        >
           <SearchIcon className="h-4 w-4 text-black/40" />
           <input
             className="w-full bg-transparent text-sm text-black/80 placeholder:text-black/40 focus:outline-none"
             placeholder="Buscar productos..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
           />
+        </form>
+
+        <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
+          <Link
+            href="/"
+            className="whitespace-nowrap rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold text-black/70"
+          >
+            Inicio
+          </Link>
+          {CATEGORY_CARDS.map((category) => (
+            <Link
+              key={category.title}
+              href={category.href}
+              className="whitespace-nowrap rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold text-black/70"
+            >
+              {category.title}
+            </Link>
+          ))}
         </div>
       </div>
       {isAuthPage && (

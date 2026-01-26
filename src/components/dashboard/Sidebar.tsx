@@ -6,6 +6,7 @@ import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlin
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import LocalMallOutlinedIcon from '@mui/icons-material/LocalMallOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
@@ -35,6 +36,23 @@ export function Sidebar({ open, onClose, isMobile }: SidebarProps) {
         <Typography variant="caption" color="text.secondary">
           Panel del cliente
         </Typography>
+        <Box
+          component={Link}
+          href="/"
+          sx={{
+            mt: 1,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 1,
+            color: 'primary.main',
+            textDecoration: 'none',
+            fontSize: 14,
+            fontWeight: 600,
+          }}
+        >
+          <HomeOutlinedIcon fontSize="small" />
+          Volver a la tienda
+        </Box>
       </Box>
 
       <Divider />

@@ -6,7 +6,7 @@
 
 export const shippingService = {
   /**
-   * Calcular costo de env�o
+   * Calcular costo de envio
    */
   async calculateShippingCost(postalCode: string, weight: number): Promise<number> {
     // TODO: Integrar con API de env�o externa

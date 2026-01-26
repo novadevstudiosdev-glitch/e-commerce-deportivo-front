@@ -72,6 +72,16 @@ export function slugify(str: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+export function buildProductSlug(name: string, id: string): string {
+  const base = slugify(name);
+  return base ? `${base}-${id}` : id;
+}
+
+export function extractProductId(slug: string): string | null {
+  const match = slug.match(/[0-9a-fA-F-]{36}$/);
+  return match ? match[0] : null;
+}
+
 /**
  * Calcula el descuento en porcentaje
  */

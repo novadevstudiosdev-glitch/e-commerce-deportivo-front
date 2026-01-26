@@ -7,25 +7,77 @@
 import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Product } from '@/types';
-import { formatCurrency } from '@/lib/utils';
+import { buildProductSlug, extractProductId, formatCurrency, slugify } from '@/lib/utils';
 import { useCart } from '@/hooks';
-
-interface ProductDetailPageProps {
-  params: {
-    slug: string;
-  };
-}
+import { productsService, ProductPublic } from '@/services/products.service';
 
 export default function ProductDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
   const [product, setProduct] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
 
   useEffect(() => {
-    // TODO: Cargar producto desde API
-    console.log('Loading product:', slug);
+    let isMounted = true;
+
+    const loadProduct = async () => {
+      setIsLoading(true);
+      setError(null);
+      setProduct(null);
+
+      const id = extractProductId(slug);
+      if (!id) {
+        setIsLoading(false);
+        setError('Producto no encontrado.');
+        return;
+      }
+
+      try {
+        const pageSize = 50;
+        const first = await productsService.getProducts({
+          page: 1,
+          limit: pageSize,
+          sort: 'newest',
+        });
+        let found = first.data.find((item) => item.id === id) ?? null;
+
+        if (!found) {
+          const totalPages = Math.max(1, Math.ceil(first.total / pageSize));
+          for (let page = 2; page <= totalPages; page += 1) {
+            const next = await productsService.getProducts({
+              page,
+              limit: pageSize,
+              sort: 'newest',
+            });
+            found = next.data.find((item) => item.id === id) ?? null;
+            if (found) break;
+          }
+        }
+
+        if (!isMounted) return;
+        if (!found) {
+          setError('Producto no encontrado.');
+          setIsLoading(false);
+          return;
+        }
+
+        setProduct(mapToProduct(found));
+        setIsLoading(false);
+      } catch (err) {
+        if (!isMounted) return;
+        setError('No se pudo cargar el producto.');
+        setIsLoading(false);
+      }
+    };
+
+    loadProduct();
+
+    return () => {
+      isMounted = false;
+    };
   }, [slug]);
 
   const handleAddToCart = () => {
@@ -34,16 +86,28 @@ export default function ProductDetailPage() {
     }
   };
 
-  if (!product) {
+  if (isLoading) {
     return <div className="py-12 text-center">Cargando...</div>;
+  }
+
+  if (error) {
+    return <div className="py-12 text-center text-red-600">{error}</div>;
+  }
+
+  if (!product) {
+    return <div className="py-12 text-center">Producto no encontrado</div>;
   }
 
   return (
     <div className="py-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Imagen */}
-        <div className="bg-gray-200 rounded-lg aspect-square flex items-center justify-center">
-          <span>Imagen del producto</span>
+        <div className="bg-gray-200 rounded-lg aspect-square overflow-hidden">
+          <img
+            src={product.images[0] || '/placeholder.png'}
+            alt={product.name}
+            className="h-full w-full object-cover"
+          />
         </div>
 
         {/* Detalles */}
@@ -73,4 +137,25 @@ export default function ProductDetailPage() {
       </div>
     </div>
   );
+}
+
+function mapToProduct(product: ProductPublic): Product {
+  const categoryName = product.category || 'general';
+  const categorySlug = slugify(categoryName);
+  const images = product.images && product.images.length > 0 ? product.images : ['/placeholder.png'];
+
+  return {
+    id: product.id,
+    name: product.name,
+    slug: buildProductSlug(product.name, product.id),
+    description: product.description,
+    price: Number(product.price),
+    category: {
+      id: categorySlug || categoryName,
+      name: categoryName,
+      slug: categorySlug || categoryName,
+    },
+    images,
+    stock: product.stock,
+  };
 }

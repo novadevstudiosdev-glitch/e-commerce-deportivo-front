@@ -4,20 +4,20 @@
 
 export const CATEGORIES = [
   { id: '1', name: 'Running', slug: 'running' },
-  { id: '2', name: 'Nataci�n', slug: 'natacion' },
-  { id: '3', name: 'F�tbol', slug: 'futbol' },
+  { id: '2', name: 'Natación', slug: 'natacion' },
+  { id: '3', name: 'Futbol', slug: 'futbol' },
   { id: '4', name: 'Rugby', slug: 'rugby' },
   { id: '5', name: 'Hockey', slug: 'hockey' },
   { id: '6', name: 'Tenis', slug: 'tenis' },
   { id: '7', name: 'Ciclismo', slug: 'ciclismo' },
-  { id: '8', name: 'B�squetbol', slug: 'basketbol' },
+  { id: '8', name: 'Basquetbol', slug: 'basketbol' },
 ];
 
 export const SORT_OPTIONS = [
-  { value: 'newest', label: 'M�s nuevo' },
+  { value: 'newest', label: 'Mas nuevo' },
   { value: 'price-asc', label: 'Menor precio' },
   { value: 'price-desc', label: 'Mayor precio' },
-  { value: 'rating', label: 'Mayor valoraci�n' },
+  { value: 'rating', label: 'Mayor valoración' },
 ];
 
 export const ITEMS_PER_PAGE = 12;

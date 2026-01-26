@@ -1,4 +1,4 @@
-﻿import api from '@/lib/api';
+﻿import { supabase } from '@/lib/supabaseClient';
 
 // ============================================
 // SERVICIOS DE PRODUCTOS
@@ -8,7 +8,7 @@ export interface ProductPublic {
   id: string;
   name: string;
   description: string;
-  price: string;
+  price: string; // numeric a veces llega como string
   currency: string;
   stock: number;
   category: string;
@@ -26,7 +26,43 @@ export interface ProductListResponse {
 
 export const productsService = {
   /**
-   * Obtener productos con filtros
+   * ✅ Traer TODOS los productos (recomendado para 250 items)
+   */
+  async getAllProducts(filters?: {
+    category?: string;
+    search?: string;
+    sort?: string;
+  }): Promise<ProductPublic[]> {
+    let query = supabase.from('products').select('*');
+
+    if (filters?.category) query = query.eq('category', filters.category);
+    if (filters?.search) query = query.ilike('name', `%${filters.search}%`);
+
+    switch (filters?.sort) {
+      case 'oldest':
+        query = query.order('created_at', { ascending: true });
+        break;
+      case 'price_asc':
+        query = query.order('price', { ascending: true });
+        break;
+      case 'price_desc':
+        query = query.order('price', { ascending: false });
+        break;
+      case 'newest':
+      default:
+        query = query.order('created_at', { ascending: false });
+        break;
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw new Error(error.message);
+
+    return (data ?? []) as ProductPublic[];
+  },
+
+  /**
+   * (Si querés paginación server-side, esto sigue existiendo)
    */
   async getProducts(filters?: {
     category?: string;
@@ -35,14 +71,50 @@ export const productsService = {
     page?: number;
     limit?: number;
   }): Promise<ProductListResponse> {
-    const params: Record<string, any> = {};
-    if (filters?.category) params.category = filters.category;
-    if (filters?.search) params.q = filters.search;
-    if (filters?.sort) params.sort = filters.sort;
-    if (filters?.page) params.page = filters.page;
-    if (filters?.limit) params.limit = filters.limit;
+    const page = filters?.page ?? 1;
+    const limit = filters?.limit ?? 12;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
 
-    const response = await api.get('/products', { params });
-    return response.data as ProductListResponse;
+    let query = supabase.from('products').select('*', { count: 'exact' });
+
+    if (filters?.category) query = query.eq('category', filters.category);
+    if (filters?.search) query = query.ilike('name', `%${filters.search}%`);
+
+    switch (filters?.sort) {
+      case 'oldest':
+        query = query.order('created_at', { ascending: true });
+        break;
+      case 'price_asc':
+        query = query.order('price', { ascending: true });
+        break;
+      case 'price_desc':
+        query = query.order('price', { ascending: false });
+        break;
+      case 'newest':
+      default:
+        query = query.order('created_at', { ascending: false });
+        break;
+    }
+
+    const { data, error, count } = await query.range(from, to);
+
+    if (error) throw new Error(error.message);
+
+    return {
+      page,
+      limit,
+      total: count ?? 0,
+      data: (data ?? []) as ProductPublic[],
+    };
+  },
+
+  /**
+   * Obtener producto por ID
+   */
+  async getProductById(id: string): Promise<ProductPublic> {
+    const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
+    if (error) throw new Error(error.message);
+    return data as ProductPublic;
   },
 };

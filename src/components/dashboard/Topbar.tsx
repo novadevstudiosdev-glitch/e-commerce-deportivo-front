@@ -16,8 +16,10 @@ import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import { useCart, useAuth } from '@/hooks';
 import { ProfileMenu } from './ProfileMenu';
+import Link from 'next/link';
 
 interface TopbarProps {
   title: string;
@@ -73,6 +75,9 @@ export function Topbar({ title, onMenuClick, isMobile }: TopbarProps) {
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <IconButton component={Link} href="/" aria-label="Ir al inicio">
+            <HomeOutlinedIcon />
+          </IconButton>
           <IconButton>
             <Badge badgeContent={totalItems} color="primary">
               <ShoppingCartOutlinedIcon />

@@ -27,6 +27,8 @@ export const ROUTES = {
   ACCOUNT: '/account',
   ACCOUNT_PROFILE: '/account/profile',
   ACCOUNT_ORDERS: '/account/orders',
+  ACCOUNT_ADDRESSES: '/account/addresses',
+  ACCOUNT_PREFERENCES: '/account/preferences',
 
   // Protegidas - Admin
   ADMIN: '/admin',
@@ -48,6 +50,8 @@ export const PROTECTED_ROUTES = [
   ROUTES.CHECKOUT,
   ROUTES.ACCOUNT_PROFILE,
   ROUTES.ACCOUNT_ORDERS,
+  ROUTES.ACCOUNT_ADDRESSES,
+  ROUTES.ACCOUNT_PREFERENCES,
   ROUTES.DASHBOARD,
   ROUTES.DASHBOARD_ADMIN,
   ROUTES.DASHBOARD_PROFILE,

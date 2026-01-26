@@ -8,12 +8,12 @@ import { usePathname } from 'next/navigation';
 
 const dashboardTheme = createTheme({
   palette: {
-    primary: { main: '#1E88E5' },
-    background: { default: '#F6F7FB' },
+    primary: { main: '#0ea5e9' },
+    background: { default: '#F8FAFC' },
   },
   shape: { borderRadius: 16 },
   typography: {
-    fontFamily: 'Roboto, Arial, sans-serif',
+    fontFamily: '"Sora", "Manrope", sans-serif',
   },
   components: {
     MuiButton: {

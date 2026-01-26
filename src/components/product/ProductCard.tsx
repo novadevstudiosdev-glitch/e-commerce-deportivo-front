@@ -4,6 +4,7 @@ import { Product } from '@/types';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/routes';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
+import { useCart } from '@/hooks';
 
 // ============================================
 // PRODUCT CARD - COMPONENTE
@@ -14,21 +15,58 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const { addItem } = useCart();
+
+  const handleAddToCart = () => {
+    addItem(
+      {
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        description: product.description,
+        price: product.price,
+        originalPrice: product.originalPrice,
+        category: product.category,
+        images: product.images,
+        stock: product.stock,
+        rating: product.rating,
+        reviews: product.reviews,
+        tags: product.tags,
+      },
+      1
+    );
+  };
+
   return (
     <div className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden">
-      <div className="aspect-square bg-gray-200">
-        <img
-          src={product.images[0] || '/placeholder.png'}
-          alt={product.name}
-          className="w-full h-full object-cover"
-        />
-      </div>
+      <Link href={ROUTES.PRODUCT_DETAIL(product.slug)} className="block">
+        <div className="aspect-square bg-gray-200">
+          <img
+            src={product.images[0] || '/placeholder.png'}
+            alt={product.name}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      </Link>
       <div className="p-4">
-        <h3 className="font-semibold text-gray-900 truncate">{product.name}</h3>
+        <Link href={ROUTES.PRODUCT_DETAIL(product.slug)} className="block">
+          <h3 className="font-semibold text-gray-900 truncate">{product.name}</h3>
+        </Link>
         <p className="text-sm text-gray-600 mb-2">{product.category.name}</p>
+        <div className="flex items-center gap-2 text-sm text-yellow-500">
+          <div className="flex items-center">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <StarIcon
+                key={i}
+                className={i < Math.round(product.rating || 0) ? 'fill-current' : 'text-gray-300'}
+              />
+            ))}
+          </div>
+          <span className="text-xs text-gray-500">({product.reviews ?? 0})</span>
+        </div>
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-lg font-bold text-gray-900">{formatCurrency(product.price)}</span>
+            <span className="text-lg font-bold text-sky-600">{formatCurrency(product.price)}</span>
             {product.originalPrice && (
               <>
                 <span className="text-sm text-gray-500 line-through ml-2">
@@ -41,7 +79,22 @@ export function ProductCard({ product }: ProductCardProps) {
             )}
           </div>
         </div>
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          className="mt-4 w-full rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600"
+        >
+          Añadir al carrito
+        </button>
       </div>
     </div>
+  );
+}
+
+function StarIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg className={`h-4 w-4 ${className}`} viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M10 15.27l-5.18 3.2 1.4-5.97L1 7.24l6.02-.52L10 1l2.98 5.72 6.02.52-5.22 5.26 1.4 5.97L10 15.27z" />
+    </svg>
   );
 }
