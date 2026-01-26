@@ -1,8 +1,12 @@
 ﻿import api from '@/lib/api';
 
+void api;
+
 // ============================================
 // SERVICIOS DE NOTIFICACIONES
 // ============================================
+
+type OrderDetails = Record<string, unknown>;
 
 export const notificationsService = {
   /**
@@ -35,7 +39,7 @@ export const notificationsService = {
   /**
    * Notificar a vendedor sobre nueva orden
    */
-  async notifySeller(orderId: string, orderDetails: any): Promise<void> {
+  async notifySeller(orderId: string, orderDetails: OrderDetails): Promise<void> {
     // TODO: Implementar servicio de notificación
     // return api.post('/notifications/notify-seller', { orderId, orderDetails });
     console.log('Notifying seller about order:', { orderId, orderDetails });

@@ -10,7 +10,13 @@ export default function AdminOffersPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
-  const handleSubmit = async (data: any) => {
+  type OfferFormData = {
+    title?: string;
+    description?: string;
+    discount?: number;
+  };
+
+  const handleSubmit = async (data: OfferFormData) => {
     setIsLoading(true);
     // TODO: Crear/editar oferta
     console.log('Saving offer:', data);

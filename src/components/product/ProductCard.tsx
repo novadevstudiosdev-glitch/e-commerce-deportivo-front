@@ -1,6 +1,7 @@
 'use client';
 
 import { Product } from '@/types';
+import Image from 'next/image';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/routes';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
@@ -41,9 +42,12 @@ export function ProductCard({ product }: ProductCardProps) {
     <div className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden">
       <Link href={ROUTES.PRODUCT_DETAIL(product.slug)} className="block">
         <div className="aspect-square bg-gray-200">
-          <img
+          <Image
             src={product.images[0] || '/placeholder.png'}
             alt={product.name}
+            width={500}
+            height={500}
+            sizes="(max-width: 768px) 100vw, 300px"
             className="w-full h-full object-cover"
           />
         </div>
@@ -84,7 +88,7 @@ export function ProductCard({ product }: ProductCardProps) {
           onClick={handleAddToCart}
           className="mt-4 w-full rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600"
         >
-          Añadir al carrito
+          Agregar al carrito
         </button>
       </div>
     </div>

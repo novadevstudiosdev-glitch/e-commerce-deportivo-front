@@ -4,6 +4,7 @@
 
 'use client';
 
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Product } from '@/types';
@@ -103,9 +104,12 @@ export default function ProductDetailPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Imagen */}
         <div className="bg-gray-200 rounded-lg aspect-square overflow-hidden">
-          <img
+          <Image
             src={product.images[0] || '/placeholder.png'}
             alt={product.name}
+            width={900}
+            height={900}
+            sizes="(max-width: 768px) 100vw, 50vw"
             className="h-full w-full object-cover"
           />
         </div>
@@ -130,7 +134,7 @@ export default function ProductDetailPage() {
               onClick={handleAddToCart}
               className="flex-1 bg-blue-600 text-white font-semibold py-2 rounded hover:bg-blue-700 transition"
             >
-              Añadir al Carrito
+              Agregar al carrito
             </button>
           </div>
         </div>

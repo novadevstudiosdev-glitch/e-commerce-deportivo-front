@@ -8,7 +8,7 @@ const registerSchema = z
   .object({
     firstName: z.string().min(2, "Nombre requerido"),
     lastName: z.string().min(2, "Apellido requerido"),
-    email: z.string().email("Correo invalido"),
+    email: z.string().email("Email inválido"),
     password: z.string().min(8, "Minimo 8 caracteres"),
     confirmPassword: z.string().min(8, "Minimo 8 caracteres"),
     phone: z.string().optional(),
@@ -34,7 +34,6 @@ export default function RegisterForm({ onSubmit, isLoading = false }: Props) {
   const {
     register,
     handleSubmit,
-    setError,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -55,26 +54,6 @@ export default function RegisterForm({ onSubmit, isLoading = false }: Props) {
     setIsVerifying(true);
 
     try {
-      const emailCheck = await fetch("/api/validate-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: data.email }),
-      });
-
-      if (!emailCheck.ok) {
-        setFormError("No se pudo validar el correo");
-        return;
-      }
-
-      const emailResult = (await emailCheck.json()) as { isValid: boolean; reason?: string };
-      if (!emailResult.isValid) {
-        setError("email", {
-          type: "manual",
-          message: emailResult.reason ?? "Correo invalido",
-        });
-        return;
-      }
-
       if (onSubmit) {
         await onSubmit(data);
       } else {

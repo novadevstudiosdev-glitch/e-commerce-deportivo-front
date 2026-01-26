@@ -1,5 +1,6 @@
 ﻿'use client';
 
+import type { FormEvent } from 'react';
 import { UserProfile } from '@/types';
 
 // ============================================
@@ -8,15 +9,16 @@ import { UserProfile } from '@/types';
 
 interface ProfileFormProps {
   profile?: UserProfile;
-  onSubmit?: (data: any) => void;
+  onSubmit?: (data: Partial<UserProfile>) => void;
   isLoading?: boolean;
 }
 
 export function ProfileForm({ profile, onSubmit, isLoading }: ProfileFormProps) {
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // TODO: Implementar validación con React Hook Form + Zod
-    onSubmit?.({});
+    const payload: Partial<UserProfile> = {};
+    onSubmit?.(payload);
   };
 
   return (

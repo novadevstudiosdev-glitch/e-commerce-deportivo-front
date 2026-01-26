@@ -1,148 +1,314 @@
-﻿// ============================================
-// CART PAGE
+// ============================================
+// CART PAGE - PRO UI
 // ============================================
 
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
+import {
+  Alert,
+  Button,
+  Chip,
+  Container,
+  Divider,
+  Grid,
+  IconButton,
+  Paper,
+  Skeleton,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
 import { ROUTES } from '@/lib/routes';
 import { useCart } from '@/hooks';
-import { formatCurrency } from '@/lib/utils';
-import { CartSummary } from '@/components';
+import { formatCurrency } from '@/lib/format';
+
+type ShippingOption = {
+  id: 'free' | 'express';
+  label: string;
+  cost: number;
+  description: string;
+};
+
+const SHIPPING_OPTIONS: ShippingOption[] = [
+  { id: 'free', label: 'Gratis', cost: 0, description: 'Retiro o envio estandar' },
+  { id: 'express', label: 'Express', cost: 1500, description: 'Entrega en 24-48 hs' },
+];
+
+const FREE_SHIPPING_THRESHOLD = 30000;
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, clearCart, totalItems, totalPrice } = useCart();
+  const [isLoading, setIsLoading] = useState(true);
+  const [shipping, setShipping] = useState<ShippingOption>(SHIPPING_OPTIONS[0]);
 
-  if (items.length === 0) {
+  useEffect(() => {
+    const id = setTimeout(() => setIsLoading(false), 250);
+    return () => clearTimeout(id);
+  }, []);
+
+  const subtotal = useMemo(() => {
+    if (typeof totalPrice === 'number') {
+      return totalPrice;
+    }
+    return items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+  }, [items, totalPrice]);
+
+  const total = subtotal + shipping.cost;
+  const missingForFree = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
+  const hasItems = items.length > 0;
+
+  if (!isLoading && !hasItems) {
     return (
-      <div className="mx-auto flex max-w-3xl flex-col items-center py-16 text-center">
-        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-          <span className="text-2xl">🛒</span>
-        </div>
-        <h1 className="mb-3 text-3xl font-bold text-slate-900">Carrito vacio</h1>
-        <p className="mb-8 text-sm text-slate-600">
-          Todavia no agregaste productos. Explora el catalogo y elegi tus favoritos.
-        </p>
-        <Link
-          href={ROUTES.PRODUCTS}
-          className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-        >
-          Ver productos
-        </Link>
-      </div>
+      <Container maxWidth="md" sx={{ py: 8 }}>
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Stack spacing={2} alignItems="center">
+            <ShoppingCartOutlinedIcon fontSize="large" color="action" />
+            <Typography variant="h5" fontWeight={700}>
+              Carrito vacio
+            </Typography>
+            <Typography color="text.secondary">
+              Todavia no agregaste productos. Explora el catalogo y elegi tus favoritos.
+            </Typography>
+            <Button variant="contained" component={Link} href={ROUTES.PRODUCTS}>
+              Ver productos
+            </Button>
+          </Stack>
+        </Paper>
+      </Container>
     );
   }
 
   return (
-    <div className="py-10">
-      <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-slate-900">Carrito de compras</h1>
-          <p className="mt-2 text-sm text-slate-600">
-            {totalItems} producto{totalItems !== 1 ? 's' : ''} en tu carrito
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={clearCart}
-            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-          >
+    <Container maxWidth="lg" sx={{ py: 6 }}>
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={2}
+        justifyContent="space-between"
+        alignItems={{ xs: 'flex-start', md: 'center' }}
+        sx={{ mb: 4 }}
+      >
+        <BoxTitle
+          title="Carrito de compras"
+          subtitle={`${totalItems} producto${totalItems !== 1 ? 's' : ''}`}
+        />
+        <Stack direction="row" spacing={2} flexWrap="wrap">
+          <Button variant="outlined" onClick={clearCart} disabled={!hasItems}>
             Vaciar carrito
-          </button>
-          <Link
-            href={ROUTES.PRODUCTS}
-            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
+          </Button>
+          <Button variant="outlined" component={Link} href={ROUTES.PRODUCTS}>
             Seguir comprando
-          </Link>
-        </div>
-      </div>
+          </Button>
+        </Stack>
+      </Stack>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-4">
-          {items.map((item) => {
-            const imageUrl = item.product.images?.[0] || '/placeholder.png';
-            const lineTotal = item.product.price * item.quantity;
+      <Grid container spacing={3}>
+        <Grid item xs={12} lg={8}>
+          <Stack spacing={2}>
+            {isLoading
+              ? Array.from({ length: 3 }).map((_, index) => (
+                  <Paper key={index} sx={{ p: 3 }}>
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid item xs={12} sm={3}>
+                        <Skeleton variant="rounded" height={120} />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Skeleton width="60%" />
+                        <Skeleton width="40%" />
+                        <Skeleton width="30%" />
+                      </Grid>
+                      <Grid item xs={12} sm={3}>
+                        <Skeleton width="80%" />
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                ))
+              : items.map((item) => {
+                  const imageUrl = item.product.images?.[0] || '/placeholder.png';
+                  const lineTotal = item.product.price * item.quantity;
+                  const stock = item.product.stock ?? 0;
+                  const hasOffer =
+                    typeof item.product.originalPrice === 'number' &&
+                    item.product.originalPrice > item.product.price;
 
-            return (
-              <div
-                key={item.id}
-                className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm md:flex-row md:items-center md:gap-6"
-              >
-                <div className="h-28 w-full overflow-hidden rounded-xl bg-slate-50 md:h-24 md:w-24">
-                  <img src={imageUrl} alt={item.product.name} className="h-full w-full object-cover" />
-                </div>
+                  return (
+                    <Paper key={item.id} sx={{ p: 3 }}>
+                      <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={12} sm={3}>
+                          <Paper
+                            variant="outlined"
+                            sx={{
+                              p: 1,
+                              bgcolor: '#F6F7FB',
+                              borderRadius: 2,
+                            }}
+                          >
+                            <Image
+                              src={imageUrl}
+                              alt={item.product.name}
+                              width={400}
+                              height={400}
+                              sizes="(max-width: 600px) 100vw, 200px"
+                              style={{ width: '100%', height: 120, objectFit: 'contain' }}
+                            />
+                          </Paper>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Stack spacing={1}>
+                            <Stack direction="row" spacing={1} flexWrap="wrap">
+                              {item.product.category?.name && (
+                                <Chip size="small" label={item.product.category.name} />
+                              )}
+                              {hasOffer && <Chip size="small" color="primary" label="Oferta" />}
+                              {stock > 0 && (
+                                <Chip
+                                  size="small"
+                                  color={stock < 5 ? 'warning' : 'success'}
+                                  label={stock < 5 ? 'Ultimas unidades' : 'En stock'}
+                                />
+                              )}
+                            </Stack>
+                            <Typography variant="h6" fontWeight={700}>
+                              {item.product.name}
+                            </Typography>
+                            <Typography color="text.secondary" variant="body2">
+                              Precio unitario: {formatCurrency(item.product.price)}
+                            </Typography>
+                            <Typography color="text.secondary" variant="body2">
+                              Total item: {formatCurrency(lineTotal)}
+                            </Typography>
+                          </Stack>
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <Stack spacing={1} alignItems={{ xs: 'flex-start', sm: 'flex-end' }}>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <IconButton
+                                size="small"
+                                onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                                disabled={item.quantity <= 1}
+                              >
+                                <RemoveIcon fontSize="small" />
+                              </IconButton>
+                              <TextField
+                                value={item.quantity}
+                                onChange={(event) => {
+                                  const value = Number(event.target.value);
+                                  if (!Number.isNaN(value)) {
+                                    updateQuantity(item.product.id, value);
+                                  }
+                                }}
+                                inputProps={{ min: 1, style: { textAlign: 'center' } }}
+                                size="small"
+                                sx={{ width: 72 }}
+                              />
+                              <IconButton
+                                size="small"
+                                onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                              >
+                                <AddIcon fontSize="small" />
+                              </IconButton>
+                            </Stack>
+                            <Button
+                              color="error"
+                              startIcon={<DeleteOutlineIcon />}
+                              onClick={() => removeItem(item.product.id)}
+                              size="small"
+                            >
+                              Eliminar
+                            </Button>
+                          </Stack>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+                  );
+                })}
+          </Stack>
+        </Grid>
 
-                <div className="flex-1">
-                  <p className="text-xs font-semibold uppercase text-slate-400">
-                    {item.product.category?.name || 'Producto'}
-                  </p>
-                  <h3 className="mt-1 text-lg font-semibold text-slate-900">{item.product.name}</h3>
-                  <p className="mt-1 text-sm text-slate-500">Precio: {formatCurrency(item.product.price)}</p>
-                </div>
+        <Grid item xs={12} lg={4}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight={700}>
+              Resumen del carrito
+            </Typography>
+            <Divider sx={{ my: 2 }} />
+            <Stack spacing={1.5}>
+              <Row label="Subtotal" value={formatCurrency(subtotal)} />
+              <Row label="Envio" value={shipping.cost === 0 ? 'Gratis' : formatCurrency(shipping.cost)} />
+              <Row label="Impuestos" value={formatCurrency(0)} />
+              <Divider />
+              <Row label="Total" value={formatCurrency(total)} strong />
+            </Stack>
 
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                    className="h-9 w-9 rounded-full border border-slate-200 text-lg text-slate-700 transition hover:bg-slate-50"
-                    disabled={item.quantity <= 1}
-                  >
-                    -
-                  </button>
-                  <input
-                    type="number"
-                    min={1}
-                    value={item.quantity}
-                    onChange={(event) => {
-                      const value = Number(event.target.value);
-                      if (!Number.isNaN(value)) {
-                        updateQuantity(item.product.id, value);
-                      }
-                    }}
-                    className="h-9 w-16 rounded-lg border border-slate-200 text-center text-sm font-semibold text-slate-900"
-                  />
-                  <button
-                    onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                    className="h-9 w-9 rounded-full border border-slate-200 text-lg text-slate-700 transition hover:bg-slate-50"
-                  >
-                    +
-                  </button>
-                </div>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle2" fontWeight={600}>
+              Opciones de envio
+            </Typography>
+            <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap' }}>
+              {SHIPPING_OPTIONS.map((option) => (
+                <Chip
+                  key={option.id}
+                  label={`${option.label} ${option.cost ? `(${formatCurrency(option.cost)})` : ''}`}
+                  color={shipping.id === option.id ? 'primary' : 'default'}
+                  onClick={() => setShipping(option)}
+                  variant={shipping.id === option.id ? 'filled' : 'outlined'}
+                />
+              ))}
+            </Stack>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              {shipping.description}
+            </Typography>
 
-                <div className="flex items-center justify-between gap-4 md:flex-col md:items-end">
-                  <p className="text-lg font-semibold text-slate-900">{formatCurrency(lineTotal)}</p>
-                  <button
-                    onClick={() => removeItem(item.product.id)}
-                    className="text-sm font-semibold text-red-500 transition hover:text-red-600"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+            {missingForFree > 0 ? (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                Te faltan {formatCurrency(missingForFree)} para envio gratis.
+              </Alert>
+            ) : (
+              <Alert severity="success" sx={{ mt: 2 }}>
+                Envio gratis aplicado.
+              </Alert>
+            )}
 
-        <div className="space-y-4">
-          <CartSummary items={items} />
-
-          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between text-sm text-slate-600">
-              <span>Subtotal</span>
-              <span>{formatCurrency(totalPrice)}</span>
-            </div>
-            <p className="mt-3 text-xs text-slate-500">
-              Finaliza tu compra y selecciona el envio en el checkout.
-            </p>
-            <Link
+            <Button
+              fullWidth
+              variant="contained"
+              component={Link}
               href={ROUTES.CHECKOUT}
-              className="mt-4 block w-full rounded-full bg-slate-900 py-3 text-center text-sm font-semibold text-white transition hover:bg-slate-800"
+              disabled={!hasItems}
+              sx={{ mt: 2 }}
             >
               Ir al checkout
-            </Link>
-          </div>
-        </div>
-      </div>
+            </Button>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Container>
+  );
+}
+
+function BoxTitle({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div>
+      <Typography variant="h4" fontWeight={700}>
+        {title}
+      </Typography>
+      <Typography color="text.secondary">{subtitle}</Typography>
     </div>
+  );
+}
+
+function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <Stack direction="row" justifyContent="space-between">
+      <Typography color="text.secondary" fontWeight={strong ? 700 : 400}>
+        {label}
+      </Typography>
+      <Typography fontWeight={strong ? 700 : 500}>{value}</Typography>
+    </Stack>
   );
 }
