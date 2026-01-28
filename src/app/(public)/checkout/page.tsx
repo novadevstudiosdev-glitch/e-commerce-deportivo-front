@@ -4,8 +4,9 @@
 
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Alert,
   Box,
@@ -24,6 +25,7 @@ import {
   Skeleton,
   Checkbox,
   Stack,
+  TextField,
 } from '@mui/material';
 import { useCart, useAuth } from '@/hooks';
 import { AUTH_TOKEN_KEY } from '@/lib/constants';
@@ -31,10 +33,12 @@ import { RequireAuth } from '@/utils/requireAuth';
 import { formatCurrency } from '@/lib/format';
 import { ROUTES } from '@/lib/routes';
 import { paymentsService } from '@/services/payments.service';
+import { MercadoPagoCardBrick } from '@/components/cart/MercadoPagoCardBrick';
 import type { CheckoutForm, CheckoutOrderSummary, ShippingMethod } from '@/types/checkout';
 
 const STORAGE_KEY = 'checkout-form';
 const ORDER_KEY = 'checkout-last-order';
+const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ?? '';
 
 const steps = ['Datos', 'Envio', 'Pago'];
 
@@ -83,15 +87,29 @@ type OrderFromCartResponse = {
   discount_total?: string;
 };
 
+type CardPaymentFormData = {
+  token: string;
+  payment_method_id: string;
+  issuer_id?: string | number;
+  installments: number;
+  payer?: {
+    email?: string;
+  };
+};
+
 export default function CheckoutPage() {
   const { items, totalPrice } = useCart();
   const { session } = useAuth();
+  const profile = session?.user;
+  const router = useRouter();
   const [activeStep, setActiveStep] = useState(0);
   const [form, setForm] = useState<CheckoutForm>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+  const [paymentMode, setPaymentMode] = useState<'card' | 'redirect'>('card');
+  const [payerEmail, setPayerEmail] = useState(profile?.email || form.contact.email || '');
 
   useEffect(() => {
     const id = setTimeout(() => setIsLoading(false), 250);
@@ -113,6 +131,15 @@ export default function CheckoutPage() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
   }, [form]);
+
+  useEffect(() => {
+    if (!payerEmail) {
+      const nextEmail = profile?.email || form.contact.email || '';
+      if (nextEmail) {
+        setPayerEmail(nextEmail);
+      }
+    }
+  }, [profile?.email, form.contact.email, payerEmail]);
 
   const subtotal = useMemo(() => {
     if (typeof totalPrice === 'number') return totalPrice;
@@ -170,7 +197,107 @@ export default function CheckoutPage() {
     setActiveStep((prev) => prev - 1);
   };
 
-  const handlePayment = async () => {
+  const buildOrderSummary = useCallback((orderId: string): CheckoutOrderSummary => ({
+    id: orderId,
+    createdAt: new Date().toISOString(),
+    items,
+    subtotal,
+    shippingCost,
+    total,
+    shippingMethod: form.shippingMethod,
+    contact: form.contact,
+    address: form.address,
+  }), [items, subtotal, shippingCost, total, form.shippingMethod, form.contact, form.address]);
+
+  const createOrder = useCallback(async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
+    if (!token) {
+      throw new Error('No se encontro token de sesion.');
+    }
+
+    const orderResponse = await fetch('/api/orders', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        items: items.map((item) => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+        })),
+      }),
+    });
+
+    if (!orderResponse.ok) {
+      const errorBody = await orderResponse.json().catch(() => null);
+      const message = (errorBody && (errorBody.error || errorBody.message))
+        ? `${errorBody.error || errorBody.message}`
+        : 'No se pudo crear la orden';
+      throw new Error(message);
+    }
+
+    const orderData = (await orderResponse.json()) as OrderFromCartResponse & { id?: string };
+    const orderId = orderData?.orderId || orderData?.id;
+    if (!orderId) {
+      throw new Error('No se pudo crear la orden.');
+    }
+
+    return orderId;
+  }, [items]);
+
+  const handleCardPaymentSubmit = useCallback(async (formData: CardPaymentFormData) => {
+    setSubmitError(null);
+    if (!form.payment.acceptTerms) {
+      setErrors({ payment: 'Debes aceptar los terminos' });
+      throw new Error('Debes aceptar los terminos.');
+    }
+    if (items.length === 0) {
+      setSubmitError('Tu carrito esta vacio.');
+      throw new Error('Tu carrito esta vacio.');
+    }
+
+    setIsPaying(true);
+    try {
+      const orderId = await createOrder();
+      const email =
+        payerEmail || formData?.payer?.email || profile?.email || form.contact.email || '';
+      if (!email) {
+        throw new Error('Falta el email del comprador.');
+      }
+
+      const paymentResponse = await paymentsService.createMercadoPagoPayment({
+        ...formData,
+        orderId,
+        payer: { email },
+      });
+      const paymentData = paymentResponse.data ?? paymentResponse;
+
+      const orderSummary = buildOrderSummary(orderId);
+      localStorage.setItem(ORDER_KEY, JSON.stringify(orderSummary));
+
+      if (paymentData.status === 'approved') {
+        router.push('/checkout/success');
+        return;
+      }
+
+      if (paymentData.status === 'pending' || paymentData.status === 'in_process') {
+        setSubmitError('Tu pago quedo pendiente. Te avisaremos cuando se confirme.');
+        return;
+      }
+
+      throw new Error('El pago fue rechazado. Intenta con otra tarjeta.');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo iniciar el pago. Intenta nuevamente.';
+      setSubmitError(message);
+      throw error;
+    } finally {
+      setIsPaying(false);
+    }
+  }, [form, items, profile?.email, router, buildOrderSummary, createOrder, payerEmail]);
+
+  const handleRedirectPayment = async () => {
     setSubmitError(null);
     if (!form.payment.acceptTerms) {
       setErrors({ payment: 'Debes aceptar los terminos' });
@@ -183,41 +310,7 @@ export default function CheckoutPage() {
 
     setIsPaying(true);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-      if (!token) {
-        throw new Error('No token');
-      }
-
-      const orderResponse = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          items: items.map((item) => ({
-            productId: item.product.id,
-            quantity: item.quantity,
-          })),
-        }),
-      });
-
-      if (!orderResponse.ok) {
-        const errorBody = await orderResponse.json().catch(() => null);
-        const message = (errorBody && (errorBody.error || errorBody.message))
-          ? `${errorBody.error || errorBody.message}`
-          : 'No se pudo crear la orden';
-        throw new Error(message);
-      }
-
-      const orderData = (await orderResponse.json()) as OrderFromCartResponse & { id?: string };
-      const orderId = orderData?.orderId || orderData?.id;
-      if (!orderId) {
-        setSubmitError('No se pudo crear la orden.');
-        console.warn('[MP] orderId missing', orderData);
-        return;
-      }
-
+      const orderId = await createOrder();
       const prefResponse = await paymentsService.createMercadoPagoPreference(orderId);
 
       const prefData = prefResponse.data ?? {};
@@ -237,19 +330,8 @@ export default function CheckoutPage() {
         return;
       }
 
-      const order: CheckoutOrderSummary = {
-        id: orderId,
-        createdAt: new Date().toISOString(),
-        items,
-        subtotal,
-        shippingCost,
-        total,
-        shippingMethod: form.shippingMethod,
-        contact: form.contact,
-        address: form.address,
-      };
-
-      localStorage.setItem(ORDER_KEY, JSON.stringify(order));
+      const orderSummary = buildOrderSummary(orderId);
+      localStorage.setItem(ORDER_KEY, JSON.stringify(orderSummary));
       window.location.href = redirectUrl;
     } catch (error) {
       setSubmitError('No se pudo iniciar el pago. Intenta nuevamente.');
@@ -272,8 +354,6 @@ export default function CheckoutPage() {
       </RequireAuth>
     );
   }
-
-  const profile = session?.user;
 
   return (
     <RequireAuth>
@@ -379,11 +459,41 @@ export default function CheckoutPage() {
                   {activeStep === 2 && (
                     <Stack spacing={2}>
                       <Typography variant="h6" fontWeight={700}>
-                        Pago con Mercado Pago
+                        Pago
                       </Typography>
-                      <Alert severity="info">
-                        Al continuar, te redirigimos a Mercado Pago para completar el pago.
-                      </Alert>
+                      <RadioGroup
+                        value={paymentMode}
+                        onChange={(e) => setPaymentMode(e.target.value as 'card' | 'redirect')}
+                      >
+                        <FormControlLabel
+                          value="card"
+                          control={<Radio />}
+                          label="Tarjeta (Mercado Pago)"
+                        />
+                        <FormControlLabel
+                          value="redirect"
+                          control={<Radio />}
+                          label="Mercado Pago (redirigir)"
+                        />
+                      </RadioGroup>
+                      {paymentMode === 'card' ? (
+                        <Alert severity="info">
+                          Completa los datos de tu tarjeta para finalizar el pago.
+                        </Alert>
+                      ) : (
+                        <Alert severity="info">
+                          Al continuar, te redirigimos a Mercado Pago para completar el pago.
+                        </Alert>
+                      )}
+                      <TextField
+                        label="Email del comprador"
+                        placeholder="buyer_test@tu-dominio.com"
+                        value={payerEmail}
+                        onChange={(e) => setPayerEmail(e.target.value)}
+                        fullWidth
+                        type="email"
+                        helperText="En modo test usa un email de comprador de prueba."
+                      />
                       <FormControlLabel
                         control={
                           <Checkbox
@@ -396,6 +506,38 @@ export default function CheckoutPage() {
                         label="Acepto terminos y condiciones"
                       />
                       {errors['payment'] && <Alert severity="error">{errors['payment']}</Alert>}
+                      {paymentMode === 'card' && (
+                        <>
+                          {!MP_PUBLIC_KEY && (
+                            <Alert severity="error">
+                              Falta configurar la clave publica de Mercado Pago.
+                            </Alert>
+                          )}
+                          {MP_PUBLIC_KEY && !payerEmail && (
+                            <Alert severity="warning">
+                              Ingresa un email de comprador para continuar.
+                            </Alert>
+                          )}
+                          {MP_PUBLIC_KEY && !form.payment.acceptTerms && (
+                            <Alert severity="warning">
+                              Acepta los terminos para habilitar el formulario de pago.
+                            </Alert>
+                          )}
+                          {MP_PUBLIC_KEY && form.payment.acceptTerms && payerEmail && (
+                            <MercadoPagoCardBrick
+                              amount={total}
+                              publicKey={MP_PUBLIC_KEY}
+                              payerEmail={payerEmail || profile?.email}
+                              onSubmit={handleCardPaymentSubmit}
+                            />
+                          )}
+                          {isPaying && (
+                            <Alert severity="info">
+                              Procesando pago, por favor espera...
+                            </Alert>
+                          )}
+                        </>
+                      )}
                     </Stack>
                   )}
                 </>
@@ -410,9 +552,13 @@ export default function CheckoutPage() {
                 <Button variant="contained" onClick={handleNext}>
                   Continuar
                 </Button>
-              ) : (
-                <Button variant="contained" onClick={handlePayment} disabled={isPaying}>
+              ) : paymentMode === 'redirect' ? (
+                <Button variant="contained" onClick={handleRedirectPayment} disabled={isPaying}>
                   {isPaying ? 'Redirigiendo...' : 'Ir a Mercado Pago'}
+                </Button>
+              ) : (
+                <Button variant="contained" disabled>
+                  Completa el pago arriba
                 </Button>
               )}
             </Stack>
