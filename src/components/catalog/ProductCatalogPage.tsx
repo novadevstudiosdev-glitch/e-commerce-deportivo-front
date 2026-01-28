@@ -30,7 +30,7 @@ import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { useCart } from '@/hooks';
 import { productsService, ProductPublic } from '@/services/products.service';
-import { buildProductSlug, capitalize, slugify } from '@/lib/utils';
+import { buildProductSlug, capitalize, normalizeImageList, slugify } from '@/lib/utils';
 import { ROUTES } from '@/lib/routes';
 
 const sora = Sora({
@@ -96,8 +96,9 @@ function mapToCatalogProduct(product: ProductPublic): Product {
   const categoryName = product.category || 'general';
   const categorySlug = slugify(categoryName) || 'general';
 
-  const image =
-    product.images && product.images.length > 0 ? product.images[0] : '/placeholder.png';
+  const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'products';
+  const images = normalizeImageList(product.images, bucket);
+  const image = images[0] || '/placeholder.png';
 
   const isFeatured = product.is_featured;
 
@@ -541,6 +542,10 @@ export default function ProductCatalogPage() {
                               component="img"
                               src={product.image}
                               alt={product.name}
+                              onError={(event) => {
+                                const target = event.currentTarget as HTMLImageElement;
+                                target.src = '/placeholder.png';
+                              }}
                               sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
                             />
                           </Box>

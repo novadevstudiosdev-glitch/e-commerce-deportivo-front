@@ -22,6 +22,7 @@ import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import ConfirmationNumberOutlinedIcon from '@mui/icons-material/ConfirmationNumberOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import { useAuth } from '@/hooks';
 
 type AdminSidebarProps = {
   open: boolean;
@@ -40,6 +41,11 @@ const items = [
 
 export function AdminSidebar({ open, onClose, isMobile }: AdminSidebarProps) {
   const pathname = usePathname();
+  const { role } = useAuth();
+  const isSeller = role === 'vendedor';
+  const visibleItems = isSeller
+    ? items.filter((item) => item.href === '/admin/products' || item.href === '/admin/orders')
+    : items;
 
   const content = (
     <Box sx={{ width: 280, p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -55,7 +61,7 @@ export function AdminSidebar({ open, onClose, isMobile }: AdminSidebarProps) {
       <Divider />
 
       <List sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {items.map((item) => {
+        {visibleItems.map((item) => {
           const active =
             item.href === '/admin' ? pathname === item.href : pathname.startsWith(item.href);
           return (

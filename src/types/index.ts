@@ -98,8 +98,11 @@ export interface Offer {
   endDate: Date;
 }
 
+export type UserRole = 'admin' | 'vendedor' | 'usuario' | 'customer' | 'user';
+
 export interface Session {
   user: UserProfile;
+  role?: UserRole;
   isAdmin: boolean;
   isAuthenticated: boolean;
 }

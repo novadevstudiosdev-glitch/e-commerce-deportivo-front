@@ -155,6 +155,7 @@ export default function CartPage() {
                               width={400}
                               height={400}
                               sizes="(max-width: 600px) 100vw, 200px"
+                              unoptimized
                               style={{ width: '100%', height: 120, objectFit: 'contain' }}
                             />
                           </Paper>

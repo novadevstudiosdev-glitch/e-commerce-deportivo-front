@@ -91,6 +91,51 @@ export function calculateDiscount(originalPrice: number, currentPrice: number): 
 }
 
 /**
+ * Normalize product image values into usable URLs.
+ * Supports arrays, JSON strings, and comma-separated strings.
+ */
+export function normalizeImageList(
+  images?: string[] | string | null,
+  bucket: string = 'products'
+): string[] {
+  if (!images) return [];
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const resolveUrl = (raw: string) => {
+    const value = raw?.trim();
+    if (!value) return '';
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      const isUnsplash =
+        value.includes('source.unsplash.com') || value.includes('images.unsplash.com');
+      return isUnsplash ? `/image-proxy?url=${encodeURIComponent(value)}` : value;
+    }
+    if (!supabaseUrl) return value;
+    const path = value.startsWith('/') ? value.slice(1) : value;
+    return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
+  };
+
+  if (Array.isArray(images)) {
+    return images.map(resolveUrl).filter(Boolean);
+  }
+
+  const raw = images.trim();
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map(resolveUrl).filter(Boolean);
+    }
+  } catch {
+    // not JSON, fall back to split
+  }
+
+  return raw
+    .split(',')
+    .map((entry) => resolveUrl(entry))
+    .filter(Boolean);
+}
+
+/**
  * Genera un ID único
  */
 export function generateId(): string {

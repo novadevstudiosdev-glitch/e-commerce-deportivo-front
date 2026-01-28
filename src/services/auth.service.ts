@@ -2,7 +2,7 @@ import type { AxiosError } from 'axios';
 import api from '@/lib/api';
 import { AUTH_TOKEN_KEY, MIN_PASSWORD_LENGTH } from '@/lib/constants';
 import { isValidEmail, isValidPassword } from '@/lib/validators';
-import type { LoginCredentials, RegisterData, Session, UserProfile } from '@/types';
+import type { LoginCredentials, RegisterData, Session, UserProfile, UserRole } from '@/types';
 
 // ============================================
 // SERVICIOS DE AUTENTICACION
@@ -39,8 +39,18 @@ const setToken = (token: string | null) => {
   }
 };
 
+const normalizeRole = (role?: string | null): UserRole | undefined => {
+  const normalized = (role || '').toLowerCase();
+  if (!normalized) return undefined;
+  if (normalized === 'customer' || normalized === 'user') return 'usuario';
+  if (normalized === 'seller' || normalized === 'vendedor') return 'vendedor';
+  if (normalized === 'admin') return 'admin';
+  return normalized as UserRole;
+};
+
 const mapSession = (data: AuthUserPayload | null, isAuthenticated: boolean): Session => {
   const profile = data?.profile;
+  const role = normalizeRole(data?.role);
   const user: UserProfile = {
     id: data?.id ?? '',
     email: data?.email ?? '',
@@ -52,7 +62,8 @@ const mapSession = (data: AuthUserPayload | null, isAuthenticated: boolean): Ses
 
   return {
     user,
-    isAdmin: data?.role === 'admin',
+    role,
+    isAdmin: role === 'admin',
     isAuthenticated,
   };
 };

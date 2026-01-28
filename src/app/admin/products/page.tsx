@@ -34,6 +34,18 @@ export default function AdminProductsPage() {
   const [deleteId, setDeleteId] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  const normalizeProducts = (value: unknown): AdminProductDTO[] => {
+    if (Array.isArray(value)) {
+      return value as AdminProductDTO[];
+    }
+    if (value && typeof value === 'object') {
+      const payload = value as { data?: unknown; items?: unknown };
+      if (Array.isArray(payload.data)) return payload.data as AdminProductDTO[];
+      if (Array.isArray(payload.items)) return payload.items as AdminProductDTO[];
+    }
+    return [];
+  };
+
   const loadProducts = async () => {
     setIsLoading(true);
     setError(null);
@@ -50,7 +62,7 @@ export default function AdminProductsPage() {
       return;
     }
     setListAvailable(true);
-    setProducts(result.data ?? []);
+    setProducts(normalizeProducts(result.data));
     setIsLoading(false);
   };
 
@@ -192,3 +204,5 @@ export default function AdminProductsPage() {
     </Stack>
   );
 }
+
+

@@ -41,6 +41,8 @@ export function Navbar() {
   const profileRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
   const { session, logout } = useAuthStore();
+  const canAccessAdmin = session?.role === 'admin' || session?.role === 'vendedor';
+  const adminHref = session?.role === 'vendedor' ? '/admin/products' : '/admin';
   const { totalItems } = useCart();
   const [isClient, setIsClient] = useState(false);
   const pathname = usePathname();
@@ -118,7 +120,13 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center">
-          <Image src="/logo.png" alt="SportShop" width={120} height={120} />
+          <Image
+            src="/logo.png"
+            alt="SportShop"
+            width={120}
+            height={120}
+            style={{ width: 'auto', height: 'auto' }}
+          />
         </Link>
 
         {/* Links */}
@@ -280,9 +288,9 @@ export function Navbar() {
                     >
                       Preferencias
                     </Link>
-                    {session?.isAdmin && (
+                    {canAccessAdmin && (
                       <Link
-                        href="/admin"
+                        href={adminHref}
                         className="block rounded-xl px-3 py-2 text-sm text-black/70 hover:bg-black/5"
                         onClick={() => setProfileOpen(false)}
                       >
