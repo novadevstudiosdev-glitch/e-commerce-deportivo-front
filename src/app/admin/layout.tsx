@@ -5,33 +5,13 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Box,
-  Button,
-  CssBaseline,
-  Paper,
-  ThemeProvider,
-  Typography,
-  createTheme,
-  useMediaQuery,
-} from '@mui/material';
+import { Box, Button, Paper, ThemeProvider, Typography } from '@mui/material';
 import { usePathname, useRouter } from 'next/navigation';
-import { AdminSidebar } from '@/components/admin/AdminSidebar';
-import { AdminShell } from '@/components/admin/AdminShell';
 import { adminService } from '@/services/admin/admin.service';
 import { LoadingBlock } from '@/components/admin/LoadingBlock';
+import { AdminLayout } from '@/components/admin/AdminLayout';
+import { adminTheme } from '@/theme';
 import { useAuth } from '@/hooks';
-
-const adminTheme = createTheme({
-  palette: {
-    primary: { main: '#0ea5e9' },
-    background: { default: '#F6F7FB' },
-  },
-  shape: { borderRadius: 16 },
-  typography: {
-    fontFamily: '"Sora", "Manrope", sans-serif',
-  },
-});
 
 const titleEntries = [
   { path: '/admin', title: 'Dashboard' },
@@ -40,16 +20,15 @@ const titleEntries = [
   { path: '/admin/stock-alerts', title: 'Stock Alerts' },
   { path: '/admin/coupons', title: 'Cupones' },
   { path: '/admin/orders', title: 'Ordenes' },
+  { path: '/admin/users', title: 'Usuarios' },
 ];
 
 type GuardState = 'loading' | 'authorized' | 'unauthorized' | 'error';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminRootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { role } = useAuth();
-  const isMobile = useMediaQuery(adminTheme.breakpoints.down('md'));
-  const [open, setOpen] = useState(false);
   const [guardState, setGuardState] = useState<GuardState>('loading');
   const [guardMessage, setGuardMessage] = useState<string | null>(null);
   const isSeller = role === 'vendedor';
@@ -88,15 +67,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <ThemeProvider theme={adminTheme}>
-      <CssBaseline />
-      <Box sx={{ display: 'flex', bgcolor: '#F6F7FB', minHeight: '100vh' }}>
+      <Box sx={{ display: 'flex', bgcolor: '#F6F7FB', minHeight: '100vh', width: '100%' }}>
         {guardState === 'authorized' && !isRoleBlocked && (
-          <>
-            <AdminSidebar open={open} onClose={() => setOpen(false)} isMobile={isMobile} />
-            <AdminShell title={title} onMenuClick={() => setOpen(true)} isMobile={isMobile}>
-              {children}
-            </AdminShell>
-          </>
+          <AdminLayout
+            title={title}
+            breadcrumbs={[{ label: 'Admin', href: '/admin' }, { label: title }]}
+          >
+            {children}
+          </AdminLayout>
         )}
 
         {(guardState === 'unauthorized' || isRoleBlocked) && (

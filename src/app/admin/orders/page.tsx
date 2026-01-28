@@ -14,6 +14,7 @@ import {
   Typography,
   Snackbar,
   MenuItem,
+  Grid,
 } from '@mui/material';
 import { adminOrdersService } from '@/services/admin/orders.service';
 import type { OrderStatus, PaymentStatus } from '@/types/admin';
@@ -22,28 +23,35 @@ export default function AdminOrdersPage() {
   const [orderId, setOrderId] = useState('');
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('pending');
   const [orderStatus, setOrderStatus] = useState<OrderStatus>('processing');
+  const [isLoading, setIsLoading] = useState(false);
   const [snack, setSnack] = useState<{ message: string; severity: 'success' | 'error' } | null>(
     null
   );
 
   const handlePayment = async () => {
     if (!orderId) return;
+    setIsLoading(true);
     const result = await adminOrdersService.updatePayment(orderId, { status: paymentStatus });
     if (!result.ok) {
       setSnack({ message: result.error || 'No se pudo actualizar el pago', severity: 'error' });
+      setIsLoading(false);
       return;
     }
     setSnack({ message: 'Pago actualizado', severity: 'success' });
+    setIsLoading(false);
   };
 
   const handleStatus = async () => {
     if (!orderId) return;
+    setIsLoading(true);
     const result = await adminOrdersService.updateStatus(orderId, { status: orderStatus });
     if (!result.ok) {
       setSnack({ message: result.error || 'No se pudo actualizar el envio', severity: 'error' });
+      setIsLoading(false);
       return;
     }
     setSnack({ message: 'Envio actualizado', severity: 'success' });
+    setIsLoading(false);
   };
 
   return (
@@ -66,43 +74,68 @@ export default function AdminOrdersPage() {
             fullWidth
           />
 
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              select
-              label="Estado de pago"
-              value={paymentStatus}
-              onChange={(e) => setPaymentStatus(e.target.value as PaymentStatus)}
-              fullWidth
-            >
-              {['pending', 'paid', 'failed', 'refunded', 'cancelled'].map((status) => (
-                <MenuItem key={status} value={status}>
-                  {status}
-                </MenuItem>
-              ))}
-            </TextField>
-            <Button variant="contained" onClick={handlePayment}>
-              Actualizar pago
-            </Button>
-          </Stack>
+          {!orderId && <Alert severity="info">Ingresa un ID para habilitar las acciones.</Alert>}
 
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              select
-              label="Estado de envio"
-              value={orderStatus}
-              onChange={(e) => setOrderStatus(e.target.value as OrderStatus)}
-              fullWidth
-            >
-              {['pending', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => (
-                <MenuItem key={status} value={status}>
-                  {status}
-                </MenuItem>
-              ))}
-            </TextField>
-            <Button variant="contained" onClick={handleStatus}>
-              Actualizar envio
-            </Button>
-          </Stack>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography fontWeight={600} sx={{ mb: 1 }}>
+                  Estado de pago
+                </Typography>
+                <Stack spacing={2}>
+                  <TextField
+                    select
+                    label="Estado de pago"
+                    value={paymentStatus}
+                    onChange={(e) => setPaymentStatus(e.target.value as PaymentStatus)}
+                    fullWidth
+                  >
+                    {['pending', 'paid', 'failed', 'refunded', 'cancelled'].map((status) => (
+                      <MenuItem key={status} value={status}>
+                        {status}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <Button
+                    variant="contained"
+                    onClick={handlePayment}
+                    disabled={!orderId || isLoading}
+                  >
+                    Actualizar pago
+                  </Button>
+                </Stack>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography fontWeight={600} sx={{ mb: 1 }}>
+                  Estado de envio
+                </Typography>
+                <Stack spacing={2}>
+                  <TextField
+                    select
+                    label="Estado de envio"
+                    value={orderStatus}
+                    onChange={(e) => setOrderStatus(e.target.value as OrderStatus)}
+                    fullWidth
+                  >
+                    {['pending', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => (
+                      <MenuItem key={status} value={status}>
+                        {status}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <Button
+                    variant="contained"
+                    onClick={handleStatus}
+                    disabled={!orderId || isLoading}
+                  >
+                    Actualizar envio
+                  </Button>
+                </Stack>
+              </Paper>
+            </Grid>
+          </Grid>
         </Stack>
       </Paper>
 
