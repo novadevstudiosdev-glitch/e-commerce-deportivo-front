@@ -22,6 +22,7 @@ import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import ConfirmationNumberOutlinedIcon from '@mui/icons-material/ConfirmationNumberOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
 import { useAuth } from '@/hooks';
 
 type AdminSidebarProps = {
@@ -37,6 +38,7 @@ const items = [
   { label: 'Stock Alerts', href: '/admin/stock-alerts', icon: <LocalShippingOutlinedIcon /> },
   { label: 'Cupones', href: '/admin/coupons', icon: <ConfirmationNumberOutlinedIcon /> },
   { label: 'Ordenes', href: '/admin/orders', icon: <ReceiptLongOutlinedIcon /> },
+  { label: 'Usuarios', href: '/admin/users', icon: <PeopleOutlinedIcon /> },
 ];
 
 export function AdminSidebar({ open, onClose, isMobile }: AdminSidebarProps) {
