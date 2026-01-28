@@ -1,13 +1,13 @@
-﻿import Link from "next/link";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import Input from "@/components/common/Input";
+import Link from 'next/link';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import Input from '@/components/common/Input';
 
 const loginSchema = z.object({
-  email: z.string().email("Correo invalido"),
-  password: z.string().min(8, "Minimo 8 caracteres"),
+  email: z.string().email('Correo invalido'),
+  password: z.string().min(8, 'Minimo 8 caracteres'),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -25,10 +25,10 @@ export default function LoginForm({ onSubmit }: Props) {
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: '', password: '' },
   });
 
-  const googleAuthUrl = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api"}/auth/google`;
+  const googleAuthUrl = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api'}/auth/google`;
 
   const handleFormSubmit = async (data: LoginFormValues) => {
     setFormError(null);
@@ -36,16 +36,16 @@ export default function LoginForm({ onSubmit }: Props) {
       if (onSubmit) {
         await onSubmit(data);
       } else {
-        console.log("Login attempt:", data);
+        console.log('Login attempt:', data);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "No se pudo iniciar sesion";
-      setFormError(message || "No se pudo iniciar sesion");
+      const message = error instanceof Error ? error.message : 'No se pudo iniciar sesion';
+      setFormError(message || 'No se pudo iniciar sesion');
     }
   };
 
   const handleGoogle = () => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== 'undefined') {
       window.location.href = googleAuthUrl;
     }
   };
@@ -59,14 +59,14 @@ export default function LoginForm({ onSubmit }: Props) {
         autoComplete="email"
         required
         error={errors.email?.message}
-        {...register("email")}
+        {...register('email')}
       />
 
       <div className="space-y-2">
         <Input
           label="Contrasena"
           placeholder="Minimo 8 caracteres"
-          type={showPassword ? "text" : "password"}
+          type={showPassword ? 'text' : 'password'}
           autoComplete="current-password"
           required
           error={errors.password?.message}
@@ -75,12 +75,12 @@ export default function LoginForm({ onSubmit }: Props) {
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
               className="text-slate-500 hover:text-slate-700"
-              aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+              aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
             >
               {showPassword ? <EyeOffIcon /> : <EyeIcon />}
             </button>
           }
-          {...register("password")}
+          {...register('password')}
         />
 
         <div className="flex justify-end">
@@ -100,7 +100,7 @@ export default function LoginForm({ onSubmit }: Props) {
         disabled={isSubmitting}
         className="mt-2 w-full rounded-xl bg-sky-600 py-3 font-semibold text-white hover:bg-sky-700 disabled:opacity-60"
       >
-        {isSubmitting ? "Validando..." : "Iniciar sesion"}
+        {isSubmitting ? 'Validando...' : 'Iniciar sesion'}
       </button>
 
       <button
@@ -114,7 +114,7 @@ export default function LoginForm({ onSubmit }: Props) {
   );
 }
 
-function EyeIcon({ className = "" }: { className?: string }) {
+function EyeIcon({ className = '' }: { className?: string }) {
   return (
     <svg
       className={className}
@@ -134,7 +134,7 @@ function EyeIcon({ className = "" }: { className?: string }) {
   );
 }
 
-function EyeOffIcon({ className = "" }: { className?: string }) {
+function EyeOffIcon({ className = '' }: { className?: string }) {
   return (
     <svg
       className={className}
@@ -144,12 +144,7 @@ function EyeOffIcon({ className = "" }: { className?: string }) {
       width="18"
       height="18"
     >
-      <path
-        d="M3 5l18 14"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
+      <path d="M3 5l18 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       <path
         d="M6.5 7.8C4.1 9.5 2 12 2 12s3.5 6 10 6c2.2 0 4.1-.6 5.7-1.5"
         stroke="currentColor"
