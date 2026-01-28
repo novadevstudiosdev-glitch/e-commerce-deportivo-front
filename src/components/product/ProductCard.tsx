@@ -4,8 +4,9 @@ import { Product } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/routes';
-import { formatCurrency, calculateDiscount } from '@/lib/utils';
+import { formatCurrency, calculateDiscount, normalizeImageList } from '@/lib/utils';
 import { useCart } from '@/hooks';
+import { useEffect, useState } from 'react';
 
 // ============================================
 // PRODUCT CARD - COMPONENTE
@@ -17,6 +18,14 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
+  const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'products';
+  const images = normalizeImageList(product.images, bucket);
+  const primaryImage = images[0] || '/placeholder.png';
+  const [imgSrc, setImgSrc] = useState(primaryImage);
+
+  useEffect(() => {
+    setImgSrc(primaryImage);
+  }, [primaryImage]);
 
   const handleAddToCart = () => {
     addItem(
@@ -43,12 +52,14 @@ export function ProductCard({ product }: ProductCardProps) {
       <Link href={ROUTES.PRODUCT_DETAIL(product.slug)} className="block">
         <div className="aspect-square bg-gray-200">
           <Image
-            src={product.images[0] || '/placeholder.png'}
+            src={imgSrc}
             alt={product.name}
             width={500}
             height={500}
             sizes="(max-width: 768px) 100vw, 300px"
+            unoptimized
             className="w-full h-full object-cover"
+            onError={() => setImgSrc('/placeholder.png')}
           />
         </div>
       </Link>

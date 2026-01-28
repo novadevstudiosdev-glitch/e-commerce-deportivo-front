@@ -3,7 +3,7 @@
 export interface UserProfileResponse {
   id: string;
   email: string;
-  role: 'customer' | 'admin';
+  role: 'customer' | 'usuario' | 'vendedor' | 'admin' | 'user';
   email_verified: boolean;
   profile: {
     first_name?: string | null;

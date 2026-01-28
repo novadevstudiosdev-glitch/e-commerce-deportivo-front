@@ -1,4 +1,4 @@
-﻿/** @type {import('next').NextConfig} */
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
@@ -16,6 +16,10 @@ const nextConfig = {
         {
           source: '/api/:path*',
           destination: 'http://localhost:3000/api/:path*',
+        },
+        {
+          source: '/orders/:path*',
+          destination: 'http://localhost:3000/orders/:path*',
         },
       ],
     };

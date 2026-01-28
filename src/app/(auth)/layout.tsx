@@ -8,7 +8,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <header className="bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="SportShop" width={90} height={36} />
+            <Image
+              src="/logo.png"
+              alt="SportShop"
+              width={90}
+              height={36}
+              style={{ width: 'auto', height: 'auto' }}
+            />
           </Link>
 
           <Link

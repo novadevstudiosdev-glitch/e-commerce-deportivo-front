@@ -1,4 +1,4 @@
-// ============================================
+﻿// ============================================
 // CHECKOUT PAGE - MULTI STEP
 // ============================================
 
@@ -6,7 +6,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   Alert,
   Box,
@@ -21,26 +20,23 @@ import {
   Step,
   StepLabel,
   Stepper,
-  TextField,
   Typography,
   Skeleton,
   Checkbox,
   Stack,
 } from '@mui/material';
-import { useCart } from '@/hooks';
+import { useCart, useAuth } from '@/hooks';
+import { AUTH_TOKEN_KEY } from '@/lib/constants';
 import { RequireAuth } from '@/utils/requireAuth';
 import { formatCurrency } from '@/lib/format';
 import { ROUTES } from '@/lib/routes';
-import type {
-  CheckoutForm,
-  CheckoutOrderSummary,
-  ShippingMethod,
-} from '@/types/checkout';
+import { paymentsService } from '@/services/payments.service';
+import type { CheckoutForm, CheckoutOrderSummary, ShippingMethod } from '@/types/checkout';
 
 const STORAGE_KEY = 'checkout-form';
 const ORDER_KEY = 'checkout-last-order';
 
-const steps = ['Datos', 'Envio', 'Pago', 'Confirmacion'];
+const steps = ['Datos', 'Envio', 'Pago'];
 
 const shippingCosts: Record<ShippingMethod, number> = {
   pickup: 0,
@@ -80,14 +76,22 @@ const initialForm: CheckoutForm = {
   },
 };
 
+type OrderFromCartResponse = {
+  orderId: string;
+  status?: string;
+  total?: string;
+  discount_total?: string;
+};
+
 export default function CheckoutPage() {
-  const router = useRouter();
-  const { items, clearCart, totalPrice } = useCart();
+  const { items, totalPrice } = useCart();
+  const { session } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
   const [form, setForm] = useState<CheckoutForm>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isPaying, setIsPaying] = useState(false);
 
   useEffect(() => {
     const id = setTimeout(() => setIsLoading(false), 250);
@@ -129,11 +133,11 @@ export default function CheckoutPage() {
       const parts = path.split('.');
       if (parts.length === 2) {
         const [group, key] = parts;
-        if (group === 'contact' || group === 'address' || group === 'payment') {
+        if (group === 'payment') {
           return {
             ...prev,
-            [group]: {
-              ...prev[group],
+            payment: {
+              ...prev.payment,
               [key]: value,
             },
           } as CheckoutForm;
@@ -146,45 +150,8 @@ export default function CheckoutPage() {
   const validateStep = (stepIndex: number) => {
     const nextErrors: Record<string, string> = {};
 
-    if (stepIndex === 0) {
-      if (!form.contact.firstName.trim()) nextErrors['contact.firstName'] = 'Requerido';
-      if (!form.contact.lastName.trim()) nextErrors['contact.lastName'] = 'Requerido';
-      if (!form.contact.dni.trim() || !/^\d+$/.test(form.contact.dni)) {
-        nextErrors['contact.dni'] = 'DNI numerico';
-      }
-      if (!form.contact.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact.email)) {
-        nextErrors['contact.email'] = 'Email invalido';
-      }
-      if (!form.contact.phone.trim()) nextErrors['contact.phone'] = 'Requerido';
-
-      if (!form.address.street.trim()) nextErrors['address.street'] = 'Requerido';
-      if (!form.address.number.trim()) nextErrors['address.number'] = 'Requerido';
-      if (!form.address.city.trim()) nextErrors['address.city'] = 'Requerido';
-      if (!form.address.province.trim()) nextErrors['address.province'] = 'Requerido';
-      if (!form.address.postalCode.trim() || !/^\d+$/.test(form.address.postalCode)) {
-        nextErrors['address.postalCode'] = 'Codigo postal numerico';
-      }
-    }
-
     if (stepIndex === 1) {
       if (!form.shippingMethod) nextErrors['shippingMethod'] = 'Selecciona un envio';
-    }
-
-    if (stepIndex === 2) {
-      if (!form.payment.cardName.trim()) nextErrors['payment.cardName'] = 'Requerido';
-      const cardDigits = form.payment.cardNumber.replace(/\s/g, '');
-      if (!/^\d{13,19}$/.test(cardDigits)) {
-        nextErrors['payment.cardNumber'] = 'Numero invalido';
-      }
-      if (!isValidExpiry(form.payment.cardExpiry)) {
-        nextErrors['payment.cardExpiry'] = 'Vencimiento invalido';
-      }
-      if (!/^\d{3,4}$/.test(form.payment.cardCvc)) {
-        nextErrors['payment.cardCvc'] = 'CVC invalido';
-      }
-      if (!form.payment.acceptTerms) {
-        nextErrors['payment.acceptTerms'] = 'Debes aceptar los terminos';
-      }
     }
 
     setErrors(nextErrors);
@@ -203,31 +170,92 @@ export default function CheckoutPage() {
     setActiveStep((prev) => prev - 1);
   };
 
-  const handleConfirm = () => {
+  const handlePayment = async () => {
     setSubmitError(null);
-    if (!validateStep(2)) {
-      setActiveStep(2);
+    if (!form.payment.acceptTerms) {
+      setErrors({ payment: 'Debes aceptar los terminos' });
       return;
     }
     if (items.length === 0) {
       setSubmitError('Tu carrito esta vacio.');
       return;
     }
-    const order: CheckoutOrderSummary = {
-      id: `ORD-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      items,
-      subtotal,
-      shippingCost,
-      total,
-      shippingMethod: form.shippingMethod,
-      contact: form.contact,
-      address: form.address,
-    };
-    localStorage.setItem(ORDER_KEY, JSON.stringify(order));
-    clearCart();
-    localStorage.removeItem(STORAGE_KEY);
-    router.push('/checkout/success');
+
+    setIsPaying(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
+      if (!token) {
+        throw new Error('No token');
+      }
+
+      const orderResponse = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            productId: item.product.id,
+            quantity: item.quantity,
+          })),
+        }),
+      });
+
+      if (!orderResponse.ok) {
+        const errorBody = await orderResponse.json().catch(() => null);
+        const message = (errorBody && (errorBody.error || errorBody.message))
+          ? `${errorBody.error || errorBody.message}`
+          : 'No se pudo crear la orden';
+        throw new Error(message);
+      }
+
+      const orderData = (await orderResponse.json()) as OrderFromCartResponse & { id?: string };
+      const orderId = orderData?.orderId || orderData?.id;
+      if (!orderId) {
+        setSubmitError('No se pudo crear la orden.');
+        console.warn('[MP] orderId missing', orderData);
+        return;
+      }
+
+      const prefResponse = await paymentsService.createMercadoPagoPreference(orderId);
+
+      const prefData = prefResponse.data ?? {};
+      const sandboxUrl = prefData.sandboxInitPoint ?? prefData.sandbox_init_point;
+      const prodUrl = prefData.initPoint ?? prefData.init_point;
+      const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+      const isLocalhost =
+        hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local');
+      const redirectUrl = isLocalhost ? (sandboxUrl || prodUrl) : (prodUrl || sandboxUrl);
+
+      console.info('[MP] orderId', orderId);
+      console.info('[MP] hostname', hostname || 'unknown');
+      console.info('[MP] redirectUrl', redirectUrl || 'missing');
+
+      if (!redirectUrl) {
+        setSubmitError('No se pudo iniciar el pago (URL de Mercado Pago faltante).');
+        return;
+      }
+
+      const order: CheckoutOrderSummary = {
+        id: orderId,
+        createdAt: new Date().toISOString(),
+        items,
+        subtotal,
+        shippingCost,
+        total,
+        shippingMethod: form.shippingMethod,
+        contact: form.contact,
+        address: form.address,
+      };
+
+      localStorage.setItem(ORDER_KEY, JSON.stringify(order));
+      window.location.href = redirectUrl;
+    } catch (error) {
+      setSubmitError('No se pudo iniciar el pago. Intenta nuevamente.');
+    } finally {
+      setIsPaying(false);
+    }
   };
 
   if (!isLoading && items.length === 0) {
@@ -244,6 +272,8 @@ export default function CheckoutPage() {
       </RequireAuth>
     );
   }
+
+  const profile = session?.user;
 
   return (
     <RequireAuth>
@@ -282,125 +312,27 @@ export default function CheckoutPage() {
                   {activeStep === 0 && (
                     <Stack spacing={2}>
                       <Typography variant="h6" fontWeight={700}>
-                        Datos personales
+                        Datos del cliente
                       </Typography>
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            label="Nombre"
-                            fullWidth
-                            value={form.contact.firstName}
-                            onChange={(e) => handleFieldChange('contact.firstName', e.target.value)}
-                            error={Boolean(errors['contact.firstName'])}
-                            helperText={errors['contact.firstName'] ?? ' '}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            label="Apellido"
-                            fullWidth
-                            value={form.contact.lastName}
-                            onChange={(e) => handleFieldChange('contact.lastName', e.target.value)}
-                            error={Boolean(errors['contact.lastName'])}
-                            helperText={errors['contact.lastName'] ?? ' '}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            label="DNI"
-                            fullWidth
-                            value={form.contact.dni}
-                            onChange={(e) => handleFieldChange('contact.dni', e.target.value)}
-                            error={Boolean(errors['contact.dni'])}
-                            helperText={errors['contact.dni'] ?? ' '}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            label="Telefono"
-                            fullWidth
-                            value={form.contact.phone}
-                            onChange={(e) => handleFieldChange('contact.phone', e.target.value)}
-                            error={Boolean(errors['contact.phone'])}
-                            helperText={errors['contact.phone'] ?? ' '}
-                          />
-                        </Grid>
-                        <Grid item xs={12}>
-                          <TextField
-                            label="Email"
-                            fullWidth
-                            value={form.contact.email}
-                            onChange={(e) => handleFieldChange('contact.email', e.target.value)}
-                            error={Boolean(errors['contact.email'])}
-                            helperText={errors['contact.email'] ?? ' '}
-                          />
-                        </Grid>
-                      </Grid>
-
-                      <Divider />
-                      <Typography variant="h6" fontWeight={700}>
-                        Direccion de envio
-                      </Typography>
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} sm={8}>
-                          <TextField
-                            label="Calle"
-                            fullWidth
-                            value={form.address.street}
-                            onChange={(e) => handleFieldChange('address.street', e.target.value)}
-                            error={Boolean(errors['address.street'])}
-                            helperText={errors['address.street'] ?? ' '}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                          <TextField
-                            label="Numero"
-                            fullWidth
-                            value={form.address.number}
-                            onChange={(e) => handleFieldChange('address.number', e.target.value)}
-                            error={Boolean(errors['address.number'])}
-                            helperText={errors['address.number'] ?? ' '}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                          <TextField
-                            label="Piso/Depto"
-                            fullWidth
-                            value={form.address.floor}
-                            onChange={(e) => handleFieldChange('address.floor', e.target.value)}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                          <TextField
-                            label="Ciudad"
-                            fullWidth
-                            value={form.address.city}
-                            onChange={(e) => handleFieldChange('address.city', e.target.value)}
-                            error={Boolean(errors['address.city'])}
-                            helperText={errors['address.city'] ?? ' '}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                          <TextField
-                            label="Provincia"
-                            fullWidth
-                            value={form.address.province}
-                            onChange={(e) => handleFieldChange('address.province', e.target.value)}
-                            error={Boolean(errors['address.province'])}
-                            helperText={errors['address.province'] ?? ' '}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                          <TextField
-                            label="Codigo Postal"
-                            fullWidth
-                            value={form.address.postalCode}
-                            onChange={(e) => handleFieldChange('address.postalCode', e.target.value)}
-                            error={Boolean(errors['address.postalCode'])}
-                            helperText={errors['address.postalCode'] ?? ' '}
-                          />
-                        </Grid>
-                      </Grid>
+                      <Alert severity="info">
+                        Tus datos se completan desde tu perfil. No se solicitan en el checkout.
+                      </Alert>
+                      <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                        <Typography fontWeight={600}>Perfil</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {profile
+                            ? `${profile.firstName} ${profile.lastName} - ${profile.email}`
+                            : 'Completa tus datos en el dashboard.'}
+                        </Typography>
+                        <Button
+                          variant="outlined"
+                          component={Link}
+                          href={ROUTES.ACCOUNT_PROFILE}
+                          sx={{ mt: 2 }}
+                        >
+                          Ir a mi perfil
+                        </Button>
+                      </Paper>
                     </Stack>
                   )}
 
@@ -447,52 +379,11 @@ export default function CheckoutPage() {
                   {activeStep === 2 && (
                     <Stack spacing={2}>
                       <Typography variant="h6" fontWeight={700}>
-                        Datos de pago
+                        Pago con Mercado Pago
                       </Typography>
-                      <TextField
-                        label="Nombre en la tarjeta"
-                        fullWidth
-                        value={form.payment.cardName}
-                        onChange={(e) => handleFieldChange('payment.cardName', e.target.value)}
-                        error={Boolean(errors['payment.cardName'])}
-                        helperText={errors['payment.cardName'] ?? ' '}
-                      />
-                      <TextField
-                        label="Numero de tarjeta"
-                        fullWidth
-                        value={form.payment.cardNumber}
-                        onChange={(e) =>
-                          handleFieldChange('payment.cardNumber', formatCardNumber(e.target.value))
-                        }
-                        error={Boolean(errors['payment.cardNumber'])}
-                        helperText={errors['payment.cardNumber'] ?? ' '}
-                      />
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            label="Vencimiento (MM/YY)"
-                            fullWidth
-                            value={form.payment.cardExpiry}
-                            onChange={(e) =>
-                              handleFieldChange('payment.cardExpiry', formatExpiry(e.target.value))
-                            }
-                            error={Boolean(errors['payment.cardExpiry'])}
-                            helperText={errors['payment.cardExpiry'] ?? ' '}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            label="CVC"
-                            fullWidth
-                            value={form.payment.cardCvc}
-                            onChange={(e) =>
-                              handleFieldChange('payment.cardCvc', onlyDigits(e.target.value, 4))
-                            }
-                            error={Boolean(errors['payment.cardCvc'])}
-                            helperText={errors['payment.cardCvc'] ?? ' '}
-                          />
-                        </Grid>
-                      </Grid>
+                      <Alert severity="info">
+                        Al continuar, te redirigimos a Mercado Pago para completar el pago.
+                      </Alert>
                       <FormControlLabel
                         control={
                           <Checkbox
@@ -504,51 +395,7 @@ export default function CheckoutPage() {
                         }
                         label="Acepto terminos y condiciones"
                       />
-                      {errors['payment.acceptTerms'] && (
-                        <Alert severity="error">{errors['payment.acceptTerms']}</Alert>
-                      )}
-                    </Stack>
-                  )}
-
-                  {activeStep === 3 && (
-                    <Stack spacing={2}>
-                      <Typography variant="h6" fontWeight={700}>
-                        Confirmacion
-                      </Typography>
-                      <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                        <Typography fontWeight={600}>Direccion</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {form.address.street} {form.address.number},{' '}
-                          {form.address.city}, {form.address.province} (
-                          {form.address.postalCode})
-                        </Typography>
-                      </Paper>
-                      <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                        <Typography fontWeight={600}>Envio</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {shippingLabels[form.shippingMethod]} -{' '}
-                          {shippingCost === 0 ? 'Gratis' : formatCurrency(shippingCost)}
-                        </Typography>
-                      </Paper>
-                      <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                        <Typography fontWeight={600}>Items</Typography>
-                        <Stack spacing={1} sx={{ mt: 1 }}>
-                          {items.map((item) => (
-                            <Stack
-                              key={item.id}
-                              direction="row"
-                              justifyContent="space-between"
-                            >
-                              <Typography variant="body2">
-                                {item.product.name} x {item.quantity}
-                              </Typography>
-                              <Typography variant="body2">
-                                {formatCurrency(item.product.price * item.quantity)}
-                              </Typography>
-                            </Stack>
-                          ))}
-                        </Stack>
-                      </Paper>
+                      {errors['payment'] && <Alert severity="error">{errors['payment']}</Alert>}
                     </Stack>
                   )}
                 </>
@@ -564,8 +411,8 @@ export default function CheckoutPage() {
                   Continuar
                 </Button>
               ) : (
-                <Button variant="contained" onClick={handleConfirm}>
-                  Confirmar compra
+                <Button variant="contained" onClick={handlePayment} disabled={isPaying}>
+                  {isPaying ? 'Redirigiendo...' : 'Ir a Mercado Pago'}
                 </Button>
               )}
             </Stack>
@@ -610,25 +457,3 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
   );
 }
 
-function formatCardNumber(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 19);
-  return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
-}
-
-function formatExpiry(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 4);
-  if (digits.length <= 2) return digits;
-  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-}
-
-function onlyDigits(value: string, max: number) {
-  return value.replace(/\D/g, '').slice(0, max);
-}
-
-function isValidExpiry(value: string) {
-  if (!/^\d{2}\/\d{2}$/.test(value)) return false;
-  const [mm, yy] = value.split('/').map(Number);
-  if (mm < 1 || mm > 12) return false;
-  if (!Number.isFinite(yy)) return false;
-  return true;
-}

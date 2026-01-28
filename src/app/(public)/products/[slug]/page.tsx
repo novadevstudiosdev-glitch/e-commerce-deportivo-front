@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Product } from '@/types';
-import { buildProductSlug, extractProductId, formatCurrency, slugify } from '@/lib/utils';
+import { buildProductSlug, extractProductId, formatCurrency, normalizeImageList, slugify } from '@/lib/utils';
 import { useCart } from '@/hooks';
 import { productsService, ProductPublic } from '@/services/products.service';
 
@@ -19,6 +19,7 @@ export default function ProductDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [imgSrc, setImgSrc] = useState('/placeholder.png');
   const { addItem } = useCart();
 
   useEffect(() => {
@@ -81,6 +82,12 @@ export default function ProductDetailPage() {
     };
   }, [slug]);
 
+  useEffect(() => {
+    if (product?.images?.[0]) {
+      setImgSrc(product.images[0]);
+    }
+  }, [product?.images]);
+
   const handleAddToCart = () => {
     if (product) {
       addItem(product, quantity);
@@ -105,12 +112,14 @@ export default function ProductDetailPage() {
         {/* Imagen */}
         <div className="bg-gray-200 rounded-lg aspect-square overflow-hidden">
           <Image
-            src={product.images[0] || '/placeholder.png'}
+            src={imgSrc}
             alt={product.name}
             width={900}
             height={900}
             sizes="(max-width: 768px) 100vw, 50vw"
+            unoptimized
             className="h-full w-full object-cover"
+            onError={() => setImgSrc('/placeholder.png')}
           />
         </div>
 
@@ -146,7 +155,9 @@ export default function ProductDetailPage() {
 function mapToProduct(product: ProductPublic): Product {
   const categoryName = product.category || 'general';
   const categorySlug = slugify(categoryName);
-  const images = product.images && product.images.length > 0 ? product.images : ['/placeholder.png'];
+  const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'products';
+  const images = normalizeImageList(product.images, bucket);
+  const safeImages = images.length > 0 ? images : ['/placeholder.png'];
 
   return {
     id: product.id,
@@ -159,7 +170,7 @@ function mapToProduct(product: ProductPublic): Product {
       name: categoryName,
       slug: categorySlug || categoryName,
     },
-    images,
+    images: safeImages,
     stock: product.stock,
   };
 }
