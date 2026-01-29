@@ -13,6 +13,8 @@ type CouponFormProps = {
   onSubmit: () => void;
   isLoading?: boolean;
   submitLabel?: string;
+  variant?: 'card' | 'plain';
+  showActions?: boolean;
 };
 
 export function CouponForm({
@@ -21,13 +23,15 @@ export function CouponForm({
   onSubmit,
   isLoading = false,
   submitLabel = 'Guardar',
+  variant = 'card',
+  showActions = true,
 }: CouponFormProps) {
   const updateField = (field: keyof CouponFormType, fieldValue: string | number | boolean) => {
     onChange({ ...value, [field]: fieldValue });
   };
 
-  return (
-    <Paper sx={{ p: 3 }}>
+  const content = (
+    <>
       <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
         Cupon
       </Typography>
@@ -94,11 +98,19 @@ export function CouponForm({
         </Grid>
       </Grid>
 
-      <Stack direction="row" justifyContent="flex-end" sx={{ mt: 3 }}>
-        <Button variant="contained" onClick={onSubmit} disabled={isLoading}>
-          {submitLabel}
-        </Button>
-      </Stack>
-    </Paper>
+      {showActions && (
+        <Stack direction="row" justifyContent="flex-end" sx={{ mt: 3 }}>
+          <Button variant="contained" onClick={onSubmit} disabled={isLoading}>
+            {submitLabel}
+          </Button>
+        </Stack>
+      )}
+    </>
   );
+
+  if (variant === 'plain') {
+    return <Stack spacing={2}>{content}</Stack>;
+  }
+
+  return <Paper sx={{ p: 3 }}>{content}</Paper>;
 }

@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { CartItem, Product } from '@/types';
+import type { Coupon } from '@/lib/coupons';
+import { applyCoupon } from '@/lib/coupons';
 
 // ============================================
 // STORE DE CARRITO
@@ -7,16 +9,22 @@ import { CartItem, Product } from '@/types';
 
 interface CartStore {
   items: CartItem[];
+  appliedCoupon: Coupon | null;
   addItem: (product: Product, quantity: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
+  applyCoupon: (coupon: Coupon) => void;
+  removeCoupon: () => void;
+  getSubtotal: () => number;
+  getDiscountAmount: () => number;
   getTotalPrice: () => number;
   getTotalItems: () => number;
 }
 
 export const useCartStore = create<CartStore>((set, get) => ({
   items: [],
+  appliedCoupon: null,
 
   addItem: (product: Product, quantity: number) => {
     set((state) => {
@@ -56,11 +64,33 @@ export const useCartStore = create<CartStore>((set, get) => ({
   },
 
   clearCart: () => {
-    set({ items: [] });
+    set({ items: [], appliedCoupon: null });
+  },
+
+  applyCoupon: (coupon: Coupon) => {
+    set({ appliedCoupon: coupon });
+  },
+
+  removeCoupon: () => {
+    set({ appliedCoupon: null });
+  },
+
+  getSubtotal: () => {
+    return get().items.reduce((total, item) => total + item.product.price * item.quantity, 0);
+  },
+
+  getDiscountAmount: () => {
+    const subtotal = get().items.reduce((total, item) => total + item.product.price * item.quantity, 0);
+    const coupon = get().appliedCoupon;
+    if (!coupon) return 0;
+    return applyCoupon(subtotal, coupon).discount;
   },
 
   getTotalPrice: () => {
-    return get().items.reduce((total, item) => total + item.product.price * item.quantity, 0);
+    const subtotal = get().items.reduce((total, item) => total + item.product.price * item.quantity, 0);
+    const coupon = get().appliedCoupon;
+    if (!coupon) return subtotal;
+    return applyCoupon(subtotal, coupon).total;
   },
 
   getTotalItems: () => {

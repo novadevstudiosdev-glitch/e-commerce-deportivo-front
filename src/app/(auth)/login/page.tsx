@@ -39,6 +39,7 @@ export default function AuthPage() {
 
   const handleLogin = async (data: LoginValues) => {
     setIsLoading(true);
+    setLoginBanner(null);
     try {
       const session = await authService.login(data);
       setSession(session);
@@ -52,7 +53,11 @@ export default function AuthPage() {
       });
       router.push(ROUTES.HOME);
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      const message = getErrorMessage(error);
+      if (message.toLowerCase().includes('no esta verificado')) {
+        setLoginBanner(message);
+      }
+      throw new Error(message);
     } finally {
       setIsLoading(false);
     }
@@ -62,17 +67,26 @@ export default function AuthPage() {
     setIsLoading(true);
     setRegisterMessage(null);
     try {
-      const session = await authService.register({
+      await authService.register({
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
         password: data.password,
         phone: data.phone,
       });
-      setSession(session);
-      setRegisterMessage('Cuenta creada, revisa tu email (spam/promociones).');
-      setMode('login');
-      router.push(`${ROUTES.AUTH_LOGIN}?registered=1`);
+      setRegisterMessage('Cuenta creada. Revisa tu email para verificar tu cuenta.');
+      const result = await Swal.fire({
+        icon: 'info',
+        title: 'Verifica tu cuenta',
+        text: 'Revisa tu correo (spam/promociones) para completar la verificacion.',
+        confirmButtonText: 'Ir a Gmail',
+        confirmButtonColor: '#0ea5e9',
+        showCancelButton: true,
+        cancelButtonText: 'Cerrar',
+      });
+      if (result.isConfirmed && typeof window !== 'undefined') {
+        window.location.href = 'https://mail.google.com/mail/u/0/#inbox';
+      }
     } catch (error) {
       throw new Error(getErrorMessage(error));
     } finally {
@@ -83,7 +97,7 @@ export default function AuthPage() {
   useEffect(() => {
     const registered = searchParams.get('registered');
     if (registered) {
-      setLoginBanner('Cuenta creada. Ahora inicia sesion.');
+      setLoginBanner('Cuenta creada. Revisa tu correo para verificarla.');
     } else {
       setLoginBanner(null);
     }
@@ -119,8 +133,28 @@ export default function AuthPage() {
           </div>
 
           {mode === 'login' && loginBanner && (
-            <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              {loginBanner}
+            <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <p>{loginBanner}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-700"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.location.href = 'https://mail.google.com/mail/u/0/#inbox';
+                    }
+                  }}
+                >
+                  Ir a Gmail
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  onClick={() => setLoginBanner(null)}
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           )}
 

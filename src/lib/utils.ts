@@ -104,9 +104,7 @@ export function normalizeImageList(
     const value = raw?.trim();
     if (!value) return '';
     if (value.startsWith('http://') || value.startsWith('https://')) {
-      const isUnsplash =
-        value.includes('source.unsplash.com') || value.includes('images.unsplash.com');
-      return isUnsplash ? `/image-proxy?url=${encodeURIComponent(value)}` : value;
+      return value;
     }
     if (!supabaseUrl) return value;
     const path = value.startsWith('/') ? value.slice(1) : value;

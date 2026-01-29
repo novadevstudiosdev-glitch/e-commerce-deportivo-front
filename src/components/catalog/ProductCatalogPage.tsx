@@ -30,7 +30,8 @@ import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { useCart } from '@/hooks';
 import { productsService, ProductPublic } from '@/services/products.service';
-import { buildProductSlug, capitalize, normalizeImageList, slugify } from '@/lib/utils';
+import { buildProductSlug, capitalize, formatCurrency, normalizeImageList, slugify } from '@/lib/utils';
+import { getCouponBadgeLabel, type Coupon } from '@/lib/coupons';
 import { ROUTES } from '@/lib/routes';
 
 const sora = Sora({
@@ -51,6 +52,8 @@ type Product = {
   rating: number;
   reviews: number;
   sizes: string[];
+  colors?: string[];
+  couponBadge?: string;
   image: string;
 };
 
@@ -88,10 +91,6 @@ const theme = createTheme({
   },
 });
 
-function formatPrice(value: number) {
-  return `$${value.toFixed(2)}`;
-}
-
 function mapToCatalogProduct(product: ProductPublic): Product {
   const categoryName = product.category || 'general';
   const categorySlug = slugify(categoryName) || 'general';
@@ -101,6 +100,14 @@ function mapToCatalogProduct(product: ProductPublic): Product {
   const image = images[0] || '/placeholder.png';
 
   const isFeatured = product.is_featured;
+  const price = toNumber(product.price) ?? 0;
+  const discountPercent = toNumber(product.discount_percent);
+  const original = toNumber(product.original_price);
+  let oldPrice = original;
+  if (!oldPrice && discountPercent && discountPercent > 0 && discountPercent < 100) {
+    oldPrice = Math.round((price / (1 - discountPercent / 100)) * 100) / 100;
+  }
+  const couponBadge = getActiveCouponLabel(product);
 
   return {
     id: product.id,
@@ -108,12 +115,15 @@ function mapToCatalogProduct(product: ProductPublic): Product {
     slug: buildProductSlug(product.name, product.id),
     brand: capitalize(categorySlug),
     categories: [categorySlug],
-    price: Number(product.price),
-    discount: isFeatured ? 10 : undefined,
+    price,
+    oldPrice,
+    discount: discountPercent ?? (isFeatured ? 10 : undefined),
     isFeatured,
-    rating: 0,
-    reviews: 0,
-    sizes: [],
+    rating: toNumber(product.rating) ?? 0,
+    reviews: toNumber(product.reviews) ?? toNumber(product.reviews_count) ?? 0,
+    sizes: normalizeStringArray(product.sizes),
+    colors: normalizeStringArray(product.colors),
+    couponBadge,
     image,
   };
 }
@@ -159,7 +169,7 @@ export default function ProductCatalogPage() {
 
       try {
         // ✅ Traer TODOS los productos (250)
-        const all = await productsService.getAllProducts({ sort: 'newest' });
+        const all = await productsService.getAllProducts({ sort: 'newest', includeCoupons: true });
         console.log('TOTAL TRAIDOS:', all.length);
 
         if (!isMounted) return;
@@ -515,10 +525,25 @@ export default function ProductCatalogPage() {
                                 size="small"
                                 sx={{
                                   position: 'absolute',
-                                  top: 10,
+                                  top: product.couponBadge ? 42 : 10,
                                   left: 10,
                                   bgcolor: '#2E7D32',
                                   color: '#fff',
+                                  fontWeight: 700,
+                                }}
+                              />
+                            )}
+
+                            {product.couponBadge && (
+                              <Chip
+                                label={product.couponBadge}
+                                size="small"
+                                sx={{
+                                  position: 'absolute',
+                                  top: 10,
+                                  left: 10,
+                                  bgcolor: '#D9F99D',
+                                  color: '#1A2E05',
                                   fontWeight: 700,
                                 }}
                               />
@@ -599,14 +624,14 @@ export default function ProductCatalogPage() {
                                 variant="subtitle1"
                                 sx={{ color: '#1E88E5', fontWeight: 800 }}
                               >
-                                {formatPrice(product.price)}
+                                {formatCurrency(product.price)}
                               </Typography>
                               {product.oldPrice && (
                                 <Typography
                                   variant="caption"
                                   sx={{ color: '#94A3B8', textDecoration: 'line-through' }}
                                 >
-                                  {formatPrice(product.oldPrice)}
+                                  {formatCurrency(product.oldPrice)}
                                 </Typography>
                               )}
                             </Stack>
@@ -646,4 +671,57 @@ export default function ProductCatalogPage() {
       </Drawer>
     </ThemeProvider>
   );
+}
+
+function toNumber(value: number | string | null | undefined): number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function normalizeStringArray(value: ProductPublic['sizes'] | ProductPublic['colors']): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
+      }
+    } catch {
+      // ignore
+    }
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function getActiveCouponLabel(product: ProductPublic): string | undefined {
+  const rows = product.coupon_products ?? [];
+  const now = new Date();
+
+  for (const row of rows) {
+    const coupon = row.coupons;
+    if (!coupon) continue;
+    if (coupon.is_active === false) continue;
+    if (coupon.starts_at && new Date(coupon.starts_at) > now) continue;
+    if (coupon.ends_at && new Date(coupon.ends_at) < now) continue;
+
+    const normalized: Coupon = {
+      ...coupon,
+      discount_value: Number(coupon.discount_value),
+    };
+    const label = getCouponBadgeLabel(normalized);
+    if (label) return label;
+  }
+
+  return undefined;
 }

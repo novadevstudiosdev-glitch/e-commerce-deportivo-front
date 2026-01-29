@@ -18,13 +18,13 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography,
-  Chip,
   Button,
 } from '@mui/material';
 import { adminService } from '@/services/admin/admin.service';
 import type { PaymentDTO } from '@/types/admin';
-import { EmptyState } from '@/components/admin/EmptyState';
+import { DataTable } from '@/components/admin/DataTable';
+import { StatusChip } from '@/components/admin/StatusChip';
+import { formatCurrency } from '@/lib/utils';
 
 type TabKey = 'all' | 'pending';
 
@@ -34,6 +34,18 @@ export default function AdminPaymentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+
+  const normalizePayments = (value: unknown): PaymentDTO[] => {
+    if (Array.isArray(value)) {
+      return value as PaymentDTO[];
+    }
+    if (value && typeof value === 'object') {
+      const payload = value as { data?: unknown; items?: unknown };
+      if (Array.isArray(payload.data)) return payload.data as PaymentDTO[];
+      if (Array.isArray(payload.items)) return payload.items as PaymentDTO[];
+    }
+    return [];
+  };
 
   const loadPayments = useCallback(async () => {
     setIsLoading(true);
@@ -45,7 +57,7 @@ export default function AdminPaymentsPage() {
       setIsLoading(false);
       return;
     }
-    setPayments(result.data ?? []);
+    setPayments(normalizePayments(result.data));
     setIsLoading(false);
   }, [tab]);
 
@@ -89,47 +101,53 @@ export default function AdminPaymentsPage() {
         </Alert>
       )}
 
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-          Pagos
-        </Typography>
-        {isLoading ? (
-          <Typography color="text.secondary">Cargando...</Typography>
-        ) : filtered.length === 0 ? (
-          <EmptyState title="Sin pagos para mostrar" />
-        ) : (
-          <Table size="small" stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Orden</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Monto</TableCell>
-                <TableCell>Estado</TableCell>
-                <TableCell>Metodo</TableCell>
+      <DataTable
+        title="Pagos"
+        isLoading={isLoading}
+        isEmpty={!isLoading && filtered.length === 0}
+        emptyTitle="Sin pagos para mostrar"
+        emptyDescription="Cuando se registren pagos, apareceran aqui."
+      >
+        <Table size="small" stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell>ID</TableCell>
+              <TableCell>Orden</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Monto</TableCell>
+              <TableCell>Estado</TableCell>
+              <TableCell>Metodo</TableCell>
+              <TableCell>Fecha</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filtered.map((payment) => (
+              <TableRow key={payment.id}>
+                <TableCell>{payment.id}</TableCell>
+                <TableCell>{payment.orderId ?? '-'}</TableCell>
+                <TableCell>{payment.userEmail ?? '-'}</TableCell>
+                <TableCell>
+                  {typeof payment.amount === 'number'
+                    ? formatCurrency(payment.amount)
+                    : '-'}
+                </TableCell>
+                <TableCell>
+                  <StatusChip
+                    label={payment.status ?? 'sin estado'}
+                    color={payment.status === 'paid' ? 'success' : 'warning'}
+                  />
+                </TableCell>
+                <TableCell>{payment.method ?? '-'}</TableCell>
+                <TableCell>
+                  {payment.createdAt
+                    ? new Date(payment.createdAt).toLocaleDateString('es-AR')
+                    : '-'}
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {filtered.map((payment) => (
-                <TableRow key={payment.id}>
-                  <TableCell>{payment.id}</TableCell>
-                  <TableCell>{payment.orderId ?? '-'}</TableCell>
-                  <TableCell>{payment.userEmail ?? '-'}</TableCell>
-                  <TableCell>{payment.amount ?? '-'}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={payment.status ?? 'sin estado'}
-                      color={payment.status === 'paid' ? 'success' : 'warning'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>{payment.method ?? '-'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </Paper>
+            ))}
+          </TableBody>
+        </Table>
+      </DataTable>
     </Stack>
   );
 }

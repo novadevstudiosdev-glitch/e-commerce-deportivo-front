@@ -6,13 +6,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import AuthTabs from '@/components/auth/AuthTabs';
 import AuthFormLogin from '@/components/auth/AuthFormLogin';
 import AuthFormRegister from '@/components/auth/AuthFormRegister';
 import { authService } from '@/services';
 import { useAuthStore } from '@/store';
-import { ROUTES } from '@/lib/routes';
+import Swal from 'sweetalert2';
 
 type LoginValues = {
   email: string;
@@ -36,7 +35,6 @@ function getErrorMessage(error: unknown) {
 export default function RegisterPage() {
   const [mode, setMode] = useState<'login' | 'register'>('register');
   const [registerMessage, setRegisterMessage] = useState<string | null>(null);
-  const router = useRouter();
   const { setSession, setIsLoading } = useAuthStore();
 
   const handleLogin = async (data: LoginValues) => {
@@ -56,16 +54,26 @@ export default function RegisterPage() {
     setIsLoading(true);
     setRegisterMessage(null);
     try {
-      const session = await authService.register({
+      await authService.register({
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
         password: data.password,
         phone: data.phone,
       });
-      setSession(session);
-      setRegisterMessage('Cuenta creada, revisa tu email (spam/promociones).');
-      router.push(`${ROUTES.AUTH_LOGIN}?registered=1`);
+      setRegisterMessage('Cuenta creada. Revisa tu email para verificar tu cuenta.');
+      const result = await Swal.fire({
+        icon: 'info',
+        title: 'Verifica tu cuenta',
+        text: 'Revisa tu correo (spam/promociones) para completar la verificacion.',
+        confirmButtonText: 'Ir a Gmail',
+        confirmButtonColor: '#0ea5e9',
+        showCancelButton: true,
+        cancelButtonText: 'Cerrar',
+      });
+      if (result.isConfirmed && typeof window !== 'undefined') {
+        window.location.href = 'https://mail.google.com/mail/u/0/#inbox';
+      }
     } catch (error) {
       throw new Error(getErrorMessage(error));
     } finally {

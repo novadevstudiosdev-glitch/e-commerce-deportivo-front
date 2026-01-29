@@ -12,10 +12,13 @@ export { SearchBar } from './layout/SearchBar';
 export { ProductCard } from './product/ProductCard';
 export { ProductGrid } from './product/ProductGrid';
 export { FiltersSidebar } from './product/FiltersSidebar';
+export { SizeGuideModal } from './product/SizeGuideModal';
 
 // Cart
 export { CartSummary } from './cart/CartSummary';
 export { CheckoutForm } from './cart/CheckoutForm';
+export { CouponBox } from './cart/CouponBox';
+export { WelcomeCouponBanner } from './cart/WelcomeCouponBanner';
 
 // Auth
 export { default as AuthFormLogin } from './auth/AuthFormLogin';
@@ -31,3 +34,8 @@ export { ToastProvider } from './common/ToastProvider';
 export { AdminSidebar } from './admin/AdminSidebar';
 export { AdminProductForm } from './admin/AdminProductForm';
 export { AdminOrdersBoard } from './admin/AdminOrdersBoard';
+
+// Animations
+export { AnimatedSection } from './animations/AnimatedSection';
+export { StaggerGroup } from './animations/StaggerGroup';
+export { StaggerItem } from './animations/StaggerItem';

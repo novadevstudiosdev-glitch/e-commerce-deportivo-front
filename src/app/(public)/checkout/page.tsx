@@ -84,7 +84,7 @@ type OrderFromCartResponse = {
 };
 
 export default function CheckoutPage() {
-  const { items, totalPrice } = useCart();
+  const { items, subtotal, discountAmount } = useCart();
   const { session } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
   const [form, setForm] = useState<CheckoutForm>(initialForm);
@@ -114,13 +114,13 @@ export default function CheckoutPage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
   }, [form]);
 
-  const subtotal = useMemo(() => {
-    if (typeof totalPrice === 'number') return totalPrice;
+  const computedSubtotal = useMemo(() => {
+    if (typeof subtotal === 'number') return subtotal;
     return items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-  }, [items, totalPrice]);
+  }, [items, subtotal]);
 
   const shippingCost = shippingCosts[form.shippingMethod];
-  const total = subtotal + shippingCost;
+  const total = Math.max(0, computedSubtotal - discountAmount) + shippingCost;
 
   const handleFieldChange = (path: string, value: string | boolean) => {
     setForm((prev) => {
@@ -241,7 +241,7 @@ export default function CheckoutPage() {
         id: orderId,
         createdAt: new Date().toISOString(),
         items,
-        subtotal,
+        subtotal: computedSubtotal,
         shippingCost,
         total,
         shippingMethod: form.shippingMethod,
@@ -425,7 +425,10 @@ export default function CheckoutPage() {
               </Typography>
               <Divider sx={{ my: 2 }} />
               <Stack spacing={1.5}>
-                <Row label="Subtotal" value={formatCurrency(subtotal)} />
+                <Row label="Subtotal" value={formatCurrency(computedSubtotal)} />
+                {discountAmount > 0 && (
+                  <Row label="Descuento" value={`-${formatCurrency(discountAmount)}`} />
+                )}
                 <Row
                   label="Envio"
                   value={shippingCost === 0 ? 'Gratis' : formatCurrency(shippingCost)}
