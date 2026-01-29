@@ -1,6 +1,6 @@
 import { CartItem } from '@/types';
 
-export type ShippingMethod = 'pickup' | 'standard' | 'express';
+export type ShippingMethod = string;
 
 export interface CheckoutContact {
   firstName: string;
@@ -42,6 +42,7 @@ export interface CheckoutOrderSummary {
   shippingCost: number;
   total: number;
   shippingMethod: ShippingMethod;
+  shippingOptionLabel?: string;
   contact: CheckoutContact;
   address: CheckoutAddress;
 }

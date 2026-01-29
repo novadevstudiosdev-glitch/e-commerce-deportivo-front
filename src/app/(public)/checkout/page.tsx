@@ -33,6 +33,7 @@ import { RequireAuth } from '@/utils/requireAuth';
 import { formatCurrency } from '@/lib/format';
 import { ROUTES } from '@/lib/routes';
 import { paymentsService } from '@/services/payments.service';
+import { shippingService, type ShippingQuoteOption } from '@/services/shipping.service';
 import { MercadoPagoCardBrick } from '@/components/cart/MercadoPagoCardBrick';
 import type { CheckoutForm, CheckoutOrderSummary, ShippingMethod } from '@/types/checkout';
 
@@ -42,17 +43,8 @@ const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ?? '';
 
 const steps = ['Datos', 'Envio', 'Pago'];
 
-const shippingCosts: Record<ShippingMethod, number> = {
-  pickup: 0,
-  standard: 1200,
-  express: 2500,
-};
-
-const shippingLabels: Record<ShippingMethod, string> = {
-  pickup: 'Retiro',
-  standard: 'Standard',
-  express: 'Express',
-};
+const DEFAULT_PACKAGE_DIMENSIONS = { length: 30, width: 20, height: 10 };
+const DEFAULT_ITEM_WEIGHT_KG = 0.4;
 
 const initialForm: CheckoutForm = {
   contact: {
@@ -70,7 +62,7 @@ const initialForm: CheckoutForm = {
     province: '',
     postalCode: '',
   },
-  shippingMethod: 'pickup',
+  shippingMethod: '',
   payment: {
     cardName: '',
     cardNumber: '',
@@ -97,6 +89,11 @@ type CardPaymentFormData = {
   };
 };
 
+type SelectableShippingOption = ShippingQuoteOption & {
+  id: string;
+  label: string;
+};
+
 export default function CheckoutPage() {
   const { items, totalPrice } = useCart();
   const { session } = useAuth();
@@ -110,6 +107,9 @@ export default function CheckoutPage() {
   const [isPaying, setIsPaying] = useState(false);
   const [paymentMode, setPaymentMode] = useState<'card' | 'redirect'>('card');
   const [payerEmail, setPayerEmail] = useState(profile?.email || form.contact.email || '');
+  const [shippingOptions, setShippingOptions] = useState<SelectableShippingOption[]>([]);
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [shippingError, setShippingError] = useState<string | null>(null);
 
   useEffect(() => {
     const id = setTimeout(() => setIsLoading(false), 250);
@@ -141,12 +141,34 @@ export default function CheckoutPage() {
     }
   }, [profile?.email, form.contact.email, payerEmail]);
 
+  useEffect(() => {
+    if (!form.address.postalCode && profile?.postalCode) {
+      setForm((prev) => ({
+        ...prev,
+        address: {
+          ...prev.address,
+          postalCode: profile.postalCode ?? '',
+        },
+      }));
+    }
+  }, [form.address.postalCode, profile?.postalCode]);
+
   const subtotal = useMemo(() => {
     if (typeof totalPrice === 'number') return totalPrice;
     return items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
   }, [items, totalPrice]);
 
-  const shippingCost = shippingCosts[form.shippingMethod];
+  const estimatedWeightKg = useMemo(() => {
+    const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
+    return Math.max(0.5, totalItems * DEFAULT_ITEM_WEIGHT_KG);
+  }, [items]);
+
+  const selectedShippingOption = useMemo(
+    () => shippingOptions.find((option) => option.id === form.shippingMethod) ?? null,
+    [shippingOptions, form.shippingMethod],
+  );
+
+  const shippingCost = selectedShippingOption?.price ?? 0;
   const total = subtotal + shippingCost;
 
   const handleFieldChange = (path: string, value: string | boolean) => {
@@ -169,6 +191,24 @@ export default function CheckoutPage() {
             },
           } as CheckoutForm;
         }
+        if (group === 'address') {
+          return {
+            ...prev,
+            address: {
+              ...prev.address,
+              [key]: value,
+            },
+          } as CheckoutForm;
+        }
+        if (group === 'contact') {
+          return {
+            ...prev,
+            contact: {
+              ...prev.contact,
+              [key]: value,
+            },
+          } as CheckoutForm;
+        }
       }
       return prev;
     });
@@ -178,12 +218,105 @@ export default function CheckoutPage() {
     const nextErrors: Record<string, string> = {};
 
     if (stepIndex === 1) {
+      if (!form.address.postalCode || !isValidPostalCode(form.address.postalCode)) {
+        nextErrors['postalCode'] = 'Ingresa un codigo postal valido (4 digitos)';
+      }
       if (!form.shippingMethod) nextErrors['shippingMethod'] = 'Selecciona un envio';
     }
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
+
+  useEffect(() => {
+    if (activeStep !== 1) {
+      return;
+    }
+
+    if (items.length === 0) {
+      setShippingOptions([]);
+      setShippingError(null);
+      return;
+    }
+
+    const postalCode = form.address.postalCode?.trim() ?? '';
+    if (!postalCode) {
+      setShippingOptions([]);
+      setShippingError(null);
+      return;
+    }
+
+    if (!isValidPostalCode(postalCode)) {
+      setShippingOptions([]);
+      setShippingError('Ingresa un codigo postal valido (4 digitos).');
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadQuotes = async () => {
+      setShippingLoading(true);
+      setShippingError(null);
+      try {
+        const rawOptions = await shippingService.quoteShipping({
+          destinationPostalCode: postalCode,
+          weightKg: estimatedWeightKg,
+          dimensionsCm: DEFAULT_PACKAGE_DIMENSIONS,
+          declaredValue: subtotal > 0 ? subtotal : undefined,
+          deliveryType: 'any',
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        const nextOptions = rawOptions.map((option, index) => ({
+          ...option,
+          id: buildShippingOptionId(option, index),
+          label: buildShippingLabel(option),
+        }));
+
+        setShippingOptions(nextOptions);
+        setForm((prev) => {
+          const exists = nextOptions.some((opt) => opt.id === prev.shippingMethod);
+          const nextMethod = exists ? prev.shippingMethod : nextOptions[0]?.id ?? '';
+          return {
+            ...prev,
+            shippingMethod: nextMethod,
+          };
+        });
+
+        if (nextOptions.length === 0) {
+          setShippingError('No hay opciones de envio para este codigo postal.');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setShippingOptions([]);
+          const message =
+            error instanceof Error
+              ? error.message
+              : 'No pudimos cotizar el envio. Intenta nuevamente.';
+          setShippingError(message);
+        }
+      } finally {
+        if (!cancelled) {
+          setShippingLoading(false);
+        }
+      }
+    };
+
+    void loadQuotes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeStep,
+    form.address.postalCode,
+    items.length,
+    estimatedWeightKg,
+    subtotal,
+  ]);
 
   const handleNext = () => {
     setSubmitError(null);
@@ -197,17 +330,29 @@ export default function CheckoutPage() {
     setActiveStep((prev) => prev - 1);
   };
 
-  const buildOrderSummary = useCallback((orderId: string): CheckoutOrderSummary => ({
-    id: orderId,
-    createdAt: new Date().toISOString(),
+  const buildOrderSummary = useCallback((orderId: string): CheckoutOrderSummary => {
+    const shippingLabel = selectedShippingOption?.label ?? 'Sin seleccionar';
+    return {
+      id: orderId,
+      createdAt: new Date().toISOString(),
+      items,
+      subtotal,
+      shippingCost,
+      total,
+      shippingMethod: shippingLabel,
+      shippingOptionLabel: shippingLabel,
+      contact: form.contact,
+      address: form.address,
+    };
+  }, [
     items,
     subtotal,
     shippingCost,
     total,
-    shippingMethod: form.shippingMethod,
-    contact: form.contact,
-    address: form.address,
-  }), [items, subtotal, shippingCost, total, form.shippingMethod, form.contact, form.address]);
+    form.contact,
+    form.address,
+    selectedShippingOption?.label,
+  ]);
 
   const createOrder = useCallback(async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
@@ -421,35 +566,63 @@ export default function CheckoutPage() {
                       <Typography variant="h6" fontWeight={700}>
                         Metodo de envio
                       </Typography>
-                      <RadioGroup
-                        value={form.shippingMethod}
-                        onChange={(e) => handleFieldChange('shippingMethod', e.target.value)}
-                      >
-                        {(['pickup', 'standard', 'express'] as ShippingMethod[]).map((method) => (
-                          <Paper
-                            key={method}
-                            variant="outlined"
-                            sx={{ p: 2, mb: 2, borderRadius: 2 }}
-                          >
-                            <FormControlLabel
-                              value={method}
-                              control={<Radio />}
-                              label={
-                                <Box>
-                                  <Typography fontWeight={600}>
-                                    {shippingLabels[method]}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {method === 'pickup'
-                                      ? 'Gratis - retiro en tienda'
-                                      : formatCurrency(shippingCosts[method])}
-                                  </Typography>
-                                </Box>
-                              }
-                            />
-                          </Paper>
-                        ))}
-                      </RadioGroup>
+                      <TextField
+                        label="Codigo postal"
+                        value={form.address.postalCode}
+                        onChange={(e) => {
+                          const nextValue = e.target.value.replace(/\D/g, '').slice(0, 4);
+                          handleFieldChange('address.postalCode', nextValue);
+                        }}
+                        inputProps={{ inputMode: 'numeric', maxLength: 4 }}
+                        helperText="Necesitamos el codigo postal para cotizar."
+                        fullWidth
+                      />
+                      {errors['postalCode'] && (
+                        <Alert severity="error">{errors['postalCode']}</Alert>
+                      )}
+                      {shippingLoading && (
+                        <Alert severity="info">Cotizando envio...</Alert>
+                      )}
+                      {shippingError && (
+                        <Alert severity="error">{shippingError}</Alert>
+                      )}
+                      {shippingOptions.length > 0 && (
+                        <RadioGroup
+                          value={form.shippingMethod}
+                          onChange={(e) => handleFieldChange('shippingMethod', e.target.value)}
+                        >
+                          {shippingOptions.map((option) => (
+                            <Paper
+                              key={option.id}
+                              variant="outlined"
+                              sx={{ p: 2, mb: 2, borderRadius: 2 }}
+                            >
+                              <FormControlLabel
+                                value={option.id}
+                                control={<Radio />}
+                                label={
+                                  <Box>
+                                    <Typography fontWeight={600}>{option.label}</Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {formatCurrency(option.price)}
+                                      {option.etaText ? ` · ${option.etaText}` : ''}
+                                    </Typography>
+                                  </Box>
+                                }
+                              />
+                            </Paper>
+                          ))}
+                        </RadioGroup>
+                      )}
+                      {!shippingLoading &&
+                        !shippingError &&
+                        shippingOptions.length === 0 &&
+                        form.address.postalCode &&
+                        isValidPostalCode(form.address.postalCode) && (
+                          <Alert severity="info">
+                            No hay opciones de envio disponibles para este codigo postal.
+                          </Alert>
+                        )}
                       {errors['shippingMethod'] && (
                         <Alert severity="error">{errors['shippingMethod']}</Alert>
                       )}
@@ -574,7 +747,13 @@ export default function CheckoutPage() {
                 <Row label="Subtotal" value={formatCurrency(subtotal)} />
                 <Row
                   label="Envio"
-                  value={shippingCost === 0 ? 'Gratis' : formatCurrency(shippingCost)}
+                  value={
+                    selectedShippingOption
+                      ? shippingCost === 0
+                        ? 'Gratis'
+                        : formatCurrency(shippingCost)
+                      : 'Pendiente'
+                  }
                 />
                 <Row label="Impuestos" value={formatCurrency(0)} />
                 <Divider />
@@ -601,5 +780,21 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
       <Typography fontWeight={strong ? 700 : 500}>{value}</Typography>
     </Stack>
   );
+}
+
+function buildShippingOptionId(option: ShippingQuoteOption, index: number) {
+  const provider = option.provider.replace(/\s+/g, '-').toLowerCase();
+  const service = option.serviceName.replace(/\s+/g, '-').toLowerCase();
+  return `${provider}-${service}-${option.deliveryType}-${option.price}-${index}`;
+}
+
+function buildShippingLabel(option: ShippingQuoteOption) {
+  const delivery =
+    option.deliveryType === 'pickup' ? 'Retiro' : 'Domicilio';
+  return `${option.provider} - ${option.serviceName} (${delivery})`;
+}
+
+function isValidPostalCode(value: string) {
+  return /^\d{4}$/.test(value);
 }
 
