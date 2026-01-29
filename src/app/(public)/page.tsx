@@ -3,8 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { productsService, ProductPublic } from "@/services/products.service";
-import { buildProductSlug, formatCurrency } from "@/lib/utils";
+import { buildProductSlug, formatCurrency, normalizeImageList } from "@/lib/utils";
+import { AnimatedSection, StaggerGroup, StaggerItem } from "@/components";
 
 type Slide = {
   title: string;
@@ -99,14 +101,15 @@ const FEATURED: FeaturedProduct[] = [
 ];
 
 function mapToFeatured(product: ProductPublic): FeaturedProduct {
-  const image =
-    product.images && product.images.length > 0 ? product.images[0] : "/placeholder.png";
+  const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || "products";
+  const images = normalizeImageList(product.images, bucket);
+  const image = images.length > 0 ? images[0] : "/placeholder.png";
   return {
     id: product.id,
     title: product.name,
     category: (product.category || "producto").toUpperCase(),
     price: formatCurrency(Number(product.price), product.currency || "ARS"),
-    badge: product.is_featured ? "Oferta" : undefined,
+    badge: product.is_featured || Number(product.discount_percent) > 0 ? "Oferta" : undefined,
     image,
     href: `/products/${buildProductSlug(product.name, product.id)}`,
   };
@@ -150,108 +153,114 @@ export default function HomePage() {
       {/* Categorías (igual al video) */}
       <section className="bg-white py-14">
         <div className="mx-auto max-w-7xl px-4">
-          <h2 className="text-center text-4xl font-extrabold tracking-tight text-slate-900">
-            Explora Nuestras Categorías
-          </h2>
-          <p className="mt-3 text-center text-base text-slate-600">
-            Encuentra el equipamiento perfecto para tu estilo de vida activo
-          </p>
+          <AnimatedSection>
+            <h2 className="text-center text-4xl font-extrabold tracking-tight text-slate-900">
+              Explora Nuestras Categorías
+            </h2>
+            <p className="mt-3 text-center text-base text-slate-600">
+              Encuentra el equipamiento perfecto para tu estilo de vida activo
+            </p>
+          </AnimatedSection>
 
-          <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-3">
+          <StaggerGroup className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-3">
             {CATEGORY_CARDS.map((c) => (
-              <Link
-                key={c.title}
-                href={c.href}
-                className="group relative overflow-hidden rounded-3xl shadow-[0_12px_30px_rgba(2,6,23,0.10)]"
-              >
-                <div className="relative h-[320px] w-full">
-                  <Image
-                    src={c.image}
-                    alt={c.title}
-                    fill
-                    className="object-cover transition duration-500 group-hover:scale-[1.03]"
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    priority={false}
-                  />
-                  {/* overlay bottom */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-                </div>
+              <StaggerItem key={c.title}>
+                <Link
+                  href={c.href}
+                  className="group relative overflow-hidden rounded-3xl shadow-[0_12px_30px_rgba(2,6,23,0.10)]"
+                >
+                  <div className="relative h-[320px] w-full">
+                    <Image
+                      src={c.image}
+                      alt={c.title}
+                      fill
+                      className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      priority={false}
+                    />
+                    {/* overlay bottom */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+                  </div>
 
-                <div className="absolute bottom-6 left-6 flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500 text-white shadow">
-                    {c.icon === "user" ? <UserIcon className="h-5 w-5" /> : <BagIcon className="h-5 w-5" />}
-                  </span>
-                  <p className="text-2xl font-extrabold text-white drop-shadow">{c.title}</p>
-                </div>
-              </Link>
+                  <div className="absolute bottom-6 left-6 flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500 text-white shadow">
+                      {c.icon === "user" ? <UserIcon className="h-5 w-5" /> : <BagIcon className="h-5 w-5" />}
+                    </span>
+                    <p className="text-2xl font-extrabold text-white drop-shadow">{c.title}</p>
+                  </div>
+                </Link>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerGroup>
         </div>
       </section>
 
       {/* Productos destacados (igual al video) */}
       <section className="bg-white pb-16">
         <div className="mx-auto max-w-7xl px-4">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <h3 className="text-4xl font-extrabold tracking-tight text-slate-900">Productos Destacados</h3>
-              <p className="mt-2 text-base text-slate-600">Los favoritos de nuestros clientes</p>
+          <AnimatedSection>
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <h3 className="text-4xl font-extrabold tracking-tight text-slate-900">Productos Destacados</h3>
+                <p className="mt-2 text-base text-slate-600">Los favoritos de nuestros clientes</p>
+              </div>
+
+              <Link href="/products" className="flex items-center gap-2 text-sky-600 hover:text-sky-700">
+                Ver Todo <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
+          </AnimatedSection>
 
-            <Link href="/products" className="flex items-center gap-2 text-sky-600 hover:text-sky-700">
-              Ver Todo <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <StaggerGroup className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {featured.map((p) => (
-              <Link
-                key={p.id}
-                href={p.href}
-                className="group rounded-3xl bg-white shadow-[0_12px_30px_rgba(2,6,23,0.10)] ring-1 ring-black/5 transition hover:-translate-y-0.5"
-              >
-                <div className="relative overflow-hidden rounded-3xl">
-                  <div className="relative aspect-[4/3] w-full bg-slate-100">
-                    <Image
-                      src={p.image}
-                      alt={p.title}
-                      fill
-                      className="object-cover transition duration-500 group-hover:scale-[1.03]"
-                      sizes="(max-width: 1024px) 50vw, 25vw"
-                      unoptimized
-                    />
+              <StaggerItem key={p.id}>
+                <Link
+                  href={p.href}
+                  className="group rounded-3xl bg-white shadow-[0_12px_30px_rgba(2,6,23,0.10)] ring-1 ring-black/5 transition hover:-translate-y-0.5"
+                >
+                  <div className="relative overflow-hidden rounded-3xl">
+                    <div className="relative aspect-[4/3] w-full bg-slate-100">
+                      <Image
+                        src={p.image}
+                        alt={p.title}
+                        fill
+                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                        sizes="(max-width: 1024px) 50vw, 25vw"
+                        unoptimized
+                      />
+                    </div>
+
+                    {/* Badge (Oferta/Nuevo) */}
+                    {p.badge && (
+                      <span
+                        className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${
+                          p.badge === "Oferta" ? "bg-lime-300 text-lime-950" : "bg-sky-500 text-white"
+                        }`}
+                      >
+                        {p.badge}
+                      </span>
+                    )}
+
+                    {/* Heart */}
+                    <button
+                      type="button"
+                      className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow hover:bg-white"
+                      onClick={(e) => e.preventDefault()}
+                      aria-label="Favorito"
+                    >
+                      <HeartIcon className="h-5 w-5" />
+                    </button>
                   </div>
 
-                  {/* Badge (Oferta/Nuevo) */}
-                  {p.badge && (
-                    <span
-                      className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${
-                        p.badge === "Oferta" ? "bg-lime-300 text-lime-950" : "bg-sky-500 text-white"
-                      }`}
-                    >
-                      {p.badge}
-                    </span>
-                  )}
-
-                  {/* Heart */}
-                  <button
-                    type="button"
-                    className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow hover:bg-white"
-                    onClick={(e) => e.preventDefault()}
-                    aria-label="Favorito"
-                  >
-                    <HeartIcon className="h-5 w-5" />
-                  </button>
-                </div>
-
-                <div className="px-5 pb-5 pt-4">
-                  <p className="text-xs font-semibold tracking-wide text-slate-500">{p.category}</p>
-                  <p className="mt-2 text-base font-semibold text-slate-900">{p.title}</p>
-                  <p className="mt-2 text-sm text-slate-700">{p.price}</p>
-                </div>
-              </Link>
+                  <div className="px-5 pb-5 pt-4">
+                    <p className="text-xs font-semibold tracking-wide text-slate-500">{p.category}</p>
+                    <p className="mt-2 text-base font-semibold text-slate-900">{p.title}</p>
+                    <p className="mt-2 text-sm text-slate-700">{p.price}</p>
+                  </div>
+                </Link>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerGroup>
         </div>
       </section>
     </div>
@@ -295,19 +304,27 @@ function HeroCarousel() {
                 />
 
                 {/* Content */}
-                <div className="absolute left-8 top-1/2 w-[min(560px,90%)] -translate-y-1/2 md:left-12">
-                  <h1 className="whitespace-pre-line text-4xl font-extrabold leading-tight text-white drop-shadow md:text-6xl">
-                    {s.title}
-                  </h1>
-                  <p className="mt-4 text-lg text-white/90 drop-shadow">{s.subtitle}</p>
-
-                  <Link
-                    href={s.href}
-                    className="mt-7 inline-flex items-center gap-3 rounded-xl bg-sky-500 px-6 py-4 text-sm font-semibold text-white shadow hover:bg-sky-600"
+                {i === index && (
+                  <motion.div
+                    key={s.title}
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="absolute left-8 top-1/2 w-[min(560px,90%)] -translate-y-1/2 md:left-12"
                   >
-                    {s.cta} <ArrowRight className="h-5 w-5" />
-                  </Link>
-                </div>
+                    <h1 className="whitespace-pre-line text-4xl font-extrabold leading-tight text-white drop-shadow md:text-6xl">
+                      {s.title}
+                    </h1>
+                    <p className="mt-4 text-lg text-white/90 drop-shadow">{s.subtitle}</p>
+
+                    <Link
+                      href={s.href}
+                      className="mt-7 inline-flex items-center gap-3 rounded-xl bg-sky-500 px-6 py-4 text-sm font-semibold text-white shadow hover:bg-sky-600"
+                    >
+                      {s.cta} <ArrowRight className="h-5 w-5" />
+                    </Link>
+                  </motion.div>
+                )}
               </div>
             ))}
           </div>

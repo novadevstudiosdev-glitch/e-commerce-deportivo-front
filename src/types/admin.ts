@@ -99,3 +99,37 @@ export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | '
 export type PatchOrderStatusPayload = {
   status: OrderStatus;
 };
+
+export type AdminUserRole = 'admin' | 'vendedor' | 'usuario' | 'customer' | 'user';
+
+export type AdminUserDTO = {
+  id: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  role?: AdminUserRole;
+  is_active?: boolean;
+  email_verified?: boolean;
+  profile?: {
+    first_name?: string;
+    last_name?: string;
+    dni?: string;
+    phone?: string;
+    date_of_birth?: string;
+    avatar_url?: string;
+  };
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type PatchUserPayload = {
+  role?: AdminUserRole;
+  is_active?: boolean;
+};
+
+export type AdminUsersListResponse = {
+  page: number;
+  limit: number;
+  total: number;
+  data: AdminUserDTO[];
+};

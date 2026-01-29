@@ -1,6 +1,12 @@
 import type { AxiosError } from 'axios';
 import api from '@/lib/api';
-import { AUTH_TOKEN_KEY, MIN_PASSWORD_LENGTH } from '@/lib/constants';
+import {
+  AUTH_TOKEN_KEY,
+  MIN_PASSWORD_LENGTH,
+  WELCOME_COUPON_CODE,
+  WELCOME_COUPON_STORAGE_KEY,
+  WELCOME_COUPON_USED_KEY,
+} from '@/lib/constants';
 import { isValidEmail, isValidPassword } from '@/lib/validators';
 import type { LoginCredentials, RegisterData, Session, UserProfile, UserRole } from '@/types';
 
@@ -89,15 +95,32 @@ export const authService = {
    * Login con credenciales
    */
   async login(credentials: LoginCredentials): Promise<Session> {
-    const response = await api.post<AuthLoginResponse>('/auth/login', credentials);
-    const token = response.data?.access_token;
+    try {
+      const response = await api.post<AuthLoginResponse>('/auth/login', credentials);
+      const token = response.data?.access_token;
 
-    if (!token) {
-      throw new Error('No token returned from login');
+      if (!token) {
+        throw new Error('No token returned from login');
+      }
+
+      setToken(token);
+      if (typeof window !== 'undefined') {
+        const hasWelcome = localStorage.getItem(WELCOME_COUPON_STORAGE_KEY);
+        const usedWelcome = localStorage.getItem(WELCOME_COUPON_USED_KEY);
+        if (!hasWelcome && usedWelcome !== 'true') {
+          localStorage.setItem(WELCOME_COUPON_STORAGE_KEY, WELCOME_COUPON_CODE);
+          localStorage.setItem(WELCOME_COUPON_USED_KEY, 'false');
+        }
+      }
+      return fetchSessionFromToken();
+    } catch (error) {
+      const message = getErrorMessage(error as AxiosError<AuthErrorResponse> | Error);
+      const normalized = message.toLowerCase();
+      if (normalized.includes('email not verified') || normalized.includes('verificado')) {
+        throw new Error('Tu email no esta verificado. Revisa tu correo para activar la cuenta.');
+      }
+      throw new Error(message);
     }
-
-    setToken(token);
-    return fetchSessionFromToken();
   },
 
   /**

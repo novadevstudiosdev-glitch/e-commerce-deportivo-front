@@ -27,6 +27,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
 import { ROUTES } from '@/lib/routes';
 import { useCart } from '@/hooks';
+import { CouponBox, WelcomeCouponBanner } from '@/components';
 import { formatCurrency } from '@/lib/format';
 
 type ShippingOption = {
@@ -44,7 +45,8 @@ const SHIPPING_OPTIONS: ShippingOption[] = [
 const FREE_SHIPPING_THRESHOLD = 30000;
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, clearCart, totalItems, totalPrice } = useCart();
+  const { items, removeItem, updateQuantity, clearCart, totalItems, subtotal, discountAmount } =
+    useCart();
   const [isLoading, setIsLoading] = useState(true);
   const [shipping, setShipping] = useState<ShippingOption>(SHIPPING_OPTIONS[0]);
 
@@ -53,15 +55,15 @@ export default function CartPage() {
     return () => clearTimeout(id);
   }, []);
 
-  const subtotal = useMemo(() => {
-    if (typeof totalPrice === 'number') {
-      return totalPrice;
+  const rawSubtotal = useMemo(() => {
+    if (typeof subtotal === 'number') {
+      return subtotal;
     }
     return items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-  }, [items, totalPrice]);
+  }, [items, subtotal]);
 
-  const total = subtotal + shipping.cost;
-  const missingForFree = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
+  const total = Math.max(0, rawSubtotal - discountAmount) + shipping.cost;
+  const missingForFree = Math.max(0, FREE_SHIPPING_THRESHOLD - rawSubtotal);
   const hasItems = items.length > 0;
 
   if (!isLoading && !hasItems) {
@@ -110,6 +112,10 @@ export default function CartPage() {
 
       <Grid container spacing={3}>
         <Grid item xs={12} lg={8}>
+          <WelcomeCouponBanner
+            subtotal={rawSubtotal}
+            productIds={items.map((item) => item.product.id)}
+          />
           <Stack spacing={2}>
             {isLoading
               ? Array.from({ length: 3 }).map((_, index) => (
@@ -239,12 +245,20 @@ export default function CartPage() {
             </Typography>
             <Divider sx={{ my: 2 }} />
             <Stack spacing={1.5}>
-              <Row label="Subtotal" value={formatCurrency(subtotal)} />
+              <Row label="Subtotal" value={formatCurrency(rawSubtotal)} />
+              {discountAmount > 0 && (
+                <Row label="Descuento" value={`-${formatCurrency(discountAmount)}`} />
+              )}
               <Row label="Envio" value={shipping.cost === 0 ? 'Gratis' : formatCurrency(shipping.cost)} />
               <Row label="Impuestos" value={formatCurrency(0)} />
               <Divider />
               <Row label="Total" value={formatCurrency(total)} strong />
             </Stack>
+
+            <CouponBox
+              subtotal={rawSubtotal}
+              productIds={items.map((item) => item.product.id)}
+            />
 
             <Divider sx={{ my: 2 }} />
             <Typography variant="subtitle2" fontWeight={600}>
