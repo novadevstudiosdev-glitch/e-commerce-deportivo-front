@@ -41,7 +41,21 @@ export const shippingService = {
    */
   async quoteShipping(payload: ShippingQuoteRequest): Promise<ShippingQuoteOption[]> {
     try {
-      const response = await api.post<ShippingQuoteOption[]>('/shipping/quote', payload);
+      const requestPayload = {
+        postalCode: payload.postalCode ?? payload.destinationPostalCode,
+        province: payload.province,
+        weight: payload.weight ?? payload.weightKg,
+        dimensions: payload.dimensions ?? payload.dimensionsCm,
+      };
+
+      if (!requestPayload.postalCode || !requestPayload.province || !requestPayload.weight || !requestPayload.dimensions) {
+        throw new Error('Faltan datos para cotizar el envio.');
+      }
+
+      const response = await api.post<ShippingQuoteOption[]>(
+        '/shipping/cotizar/correo-argentino',
+        requestPayload
+      );
       return response.data ?? [];
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -79,3 +93,5 @@ export const shippingService = {
     return { trackingNumber: '' };
   },
 };
+
+

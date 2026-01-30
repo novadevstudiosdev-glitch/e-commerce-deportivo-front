@@ -1,4 +1,4 @@
-﻿// ============================================
+// ============================================
 // CHECKOUT PAGE - MULTI STEP
 // ============================================
 
@@ -95,7 +95,7 @@ type SelectableShippingOption = ShippingQuoteOption & {
 };
 
 export default function CheckoutPage() {
-  const { items, subtotal, discountAmount } = useCart();
+  const { items, subtotal, discountAmount, appliedCoupon } = useCart();
   const { session } = useAuth();
   const profile = session?.user;
   const router = useRouter();
@@ -153,8 +153,8 @@ export default function CheckoutPage() {
     }
   }, [form.address.postalCode, profile?.postalCode]);
 
-  const subtotal = useMemo(() => {
-    if (typeof totalPrice === 'number') return totalPrice;
+  const computedSubtotal = useMemo(() => {
+    if (typeof subtotal === 'number') return subtotal;
     return items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
   }, [items, subtotal]);
 
@@ -169,7 +169,7 @@ export default function CheckoutPage() {
   );
 
   const shippingCost = selectedShippingOption?.price ?? 0;
-  const total = subtotal + shippingCost;
+  const total = Math.max(0, computedSubtotal - discountAmount) + shippingCost;
 
   const handleFieldChange = (path: string, value: string | boolean) => {
     setForm((prev) => {
@@ -218,6 +218,9 @@ export default function CheckoutPage() {
     const nextErrors: Record<string, string> = {};
 
     if (stepIndex === 1) {
+      if (!form.address.province || form.address.province.trim().length < 2) {
+        nextErrors['province'] = 'Ingresa una provincia valida';
+      }
       if (!form.address.postalCode || !isValidPostalCode(form.address.postalCode)) {
         nextErrors['postalCode'] = 'Ingresa un codigo postal valido (4 digitos)';
       }
@@ -240,7 +243,8 @@ export default function CheckoutPage() {
     }
 
     const postalCode = form.address.postalCode?.trim() ?? '';
-    if (!postalCode) {
+    const province = form.address.province?.trim() ?? '';
+    if (!postalCode || !province) {
       setShippingOptions([]);
       setShippingError(null);
       return;
@@ -260,9 +264,10 @@ export default function CheckoutPage() {
       try {
         const rawOptions = await shippingService.quoteShipping({
           destinationPostalCode: postalCode,
+          province,
           weightKg: estimatedWeightKg,
           dimensionsCm: DEFAULT_PACKAGE_DIMENSIONS,
-          declaredValue: subtotal > 0 ? subtotal : undefined,
+          declaredValue: computedSubtotal > 0 ? computedSubtotal : undefined,
           deliveryType: 'any',
         });
 
@@ -315,7 +320,7 @@ export default function CheckoutPage() {
     form.address.postalCode,
     items.length,
     estimatedWeightKg,
-    subtotal,
+    computedSubtotal,
   ]);
 
   const handleNext = () => {
@@ -336,7 +341,7 @@ export default function CheckoutPage() {
       id: orderId,
       createdAt: new Date().toISOString(),
       items,
-      subtotal,
+      subtotal: computedSubtotal,
       shippingCost,
       total,
       shippingMethod: shippingLabel,
@@ -346,7 +351,7 @@ export default function CheckoutPage() {
     };
   }, [
     items,
-    subtotal,
+    computedSubtotal,
     shippingCost,
     total,
     form.contact,
@@ -371,6 +376,7 @@ export default function CheckoutPage() {
           productId: item.product.id,
           quantity: item.quantity,
         })),
+        ...(appliedCoupon?.code ? { coupon_code: appliedCoupon.code } : {}),
       }),
     });
 
@@ -389,7 +395,7 @@ export default function CheckoutPage() {
     }
 
     return orderId;
-  }, [items]);
+  }, [items, appliedCoupon?.code]);
 
   const handleCardPaymentSubmit = useCallback(async (formData: CardPaymentFormData) => {
     setSubmitError(null);
@@ -567,6 +573,16 @@ export default function CheckoutPage() {
                         Metodo de envio
                       </Typography>
                       <TextField
+                        label="Provincia"
+                        value={form.address.province}
+                        onChange={(e) => handleFieldChange('address.province', e.target.value)}
+                        helperText="Indica tu provincia para cotizar."
+                        fullWidth
+                      />
+                      {errors['province'] && (
+                        <Alert severity="error">{errors['province']}</Alert>
+                      )}
+                      <TextField
                         label="Codigo postal"
                         value={form.address.postalCode}
                         onChange={(e) => {
@@ -605,7 +621,7 @@ export default function CheckoutPage() {
                                     <Typography fontWeight={600}>{option.label}</Typography>
                                     <Typography variant="caption" color="text.secondary">
                                       {formatCurrency(option.price)}
-                                      {option.etaText ? ` · ${option.etaText}` : ''}
+                                      {option.etaText ? ` � ${option.etaText}` : ''}
                                     </Typography>
                                   </Box>
                                 }
@@ -800,4 +816,11 @@ function buildShippingLabel(option: ShippingQuoteOption) {
 function isValidPostalCode(value: string) {
   return /^\d{4}$/.test(value);
 }
+
+
+
+
+
+
+
 

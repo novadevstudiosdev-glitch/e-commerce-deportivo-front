@@ -17,7 +17,22 @@ export function ProfileForm({ profile, onSubmit, isLoading }: ProfileFormProps) 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // TODO: Implementar validación con React Hook Form + Zod
-    const payload: Partial<UserProfile> = {};
+    const formData = new FormData(e.currentTarget);
+    const firstName = String(formData.get('firstName') ?? '').trim();
+    const lastName = String(formData.get('lastName') ?? '').trim();
+    const email = String(formData.get('email') ?? '').trim();
+    const dni = String(formData.get('dni') ?? '').trim();
+    const address = String(formData.get('address') ?? '').trim();
+    const phone = String(formData.get('phone') ?? '').trim();
+
+    const payload: Partial<UserProfile> = {
+      firstName: firstName || undefined,
+      lastName: lastName || undefined,
+      email: email || undefined,
+      dni: dni || undefined,
+      address: address || undefined,
+      phone: phone || undefined,
+    };
     onSubmit?.(payload);
   };
 
@@ -27,6 +42,7 @@ export function ProfileForm({ profile, onSubmit, isLoading }: ProfileFormProps) 
         <input
           type="text"
           placeholder="Nombre"
+          name="firstName"
           defaultValue={profile?.firstName}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
           disabled={isLoading}
@@ -34,6 +50,7 @@ export function ProfileForm({ profile, onSubmit, isLoading }: ProfileFormProps) 
         <input
           type="text"
           placeholder="Apellido"
+          name="lastName"
           defaultValue={profile?.lastName}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
           disabled={isLoading}
@@ -42,6 +59,7 @@ export function ProfileForm({ profile, onSubmit, isLoading }: ProfileFormProps) 
       <input
         type="email"
         placeholder="Email"
+        name="email"
         defaultValue={profile?.email}
         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
         disabled={isLoading}
@@ -49,6 +67,7 @@ export function ProfileForm({ profile, onSubmit, isLoading }: ProfileFormProps) 
       <input
         type="text"
         placeholder="DNI"
+        name="dni"
         defaultValue={profile?.dni}
         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
         disabled={isLoading}
@@ -56,6 +75,7 @@ export function ProfileForm({ profile, onSubmit, isLoading }: ProfileFormProps) 
       <input
         type="text"
         placeholder="Domicilio"
+        name="address"
         defaultValue={profile?.address}
         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
         disabled={isLoading}
@@ -63,6 +83,7 @@ export function ProfileForm({ profile, onSubmit, isLoading }: ProfileFormProps) 
       <input
         type="tel"
         placeholder="Teléfono"
+        name="phone"
         defaultValue={profile?.phone}
         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
         disabled={isLoading}

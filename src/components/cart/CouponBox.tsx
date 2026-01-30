@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
 import { validateCoupon } from '@/lib/coupons';
 import { useCart } from '@/hooks';
@@ -17,6 +17,14 @@ export function CouponBox({ subtotal, productIds }: CouponBoxProps) {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
     null
   );
+
+  useEffect(() => {
+    if (appliedCoupon?.code) {
+      setCode(appliedCoupon.code);
+      return;
+    }
+    setCode('');
+  }, [appliedCoupon?.code]);
 
   const handleApply = async (overrideCode?: string | React.MouseEvent) => {
     const candidate = typeof overrideCode === 'string' ? overrideCode : code;
@@ -37,6 +45,7 @@ export function CouponBox({ subtotal, productIds }: CouponBoxProps) {
 
   const handleRemove = () => {
     removeCoupon();
+    setCode('');
     setMessage({ type: 'success', text: 'Cupon removido.' });
   };
 
