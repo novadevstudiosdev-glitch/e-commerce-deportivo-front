@@ -61,10 +61,12 @@ export default function AuthPage() {
       router.push(ROUTES.HOME);
     } catch (error) {
       const message = getErrorMessage(error);
-      if (message.toLowerCase().includes('no esta verificado')) {
+      const normalized = message.toLowerCase();
+      if (normalized.includes('no esta verificado') || normalized.includes('unauthorized')) {
         setLoginBanner('Verifique su cuenta antes de conectarse o solicite un correo electrónico de verificación.');
         setLoginBannerType('unverified');
         setResendStatus(null);
+        return;
       }
       throw new Error(message);
     } finally {
@@ -143,25 +145,19 @@ export default function AuthPage() {
 
           <div className="mt-6 h-px bg-black/5" />
 
-          <div className="mt-8">
-            {mode === 'login' ? (
-              <AuthFormLogin onSubmit={handleLogin} />
-            ) : (
-              <AuthFormRegister onSubmit={handleRegister} />
-            )}
-          </div>
-
           {mode === 'login' && loginBannerType === 'unverified' && loginBanner && (
-            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-              <div className="flex items-start gap-2">
-                <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-600 text-xs font-bold text-red-600">
-                  !
-                </span>
-                <p className="font-semibold">{loginBanner}</p>
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white">
+                <div className="flex items-start gap-2">
+                  <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-white text-xs font-bold text-white">
+                    !
+                  </span>
+                  <p>{loginBanner}</p>
+                </div>
               </div>
-              <p className="mt-2 text-red-800">
+              <p className="mt-3 text-sm text-slate-700">
                 ¿Todavía no puede conectarse? Compruebe su carpeta de correo no deseado, su cuenta podría requerir alguna
-                verificación.
+                verificación
               </p>
               <button
                 type="button"
@@ -171,9 +167,17 @@ export default function AuthPage() {
               >
                 {isResending ? 'Reenviando...' : 'Reenvío de verificación de cuenta'}
               </button>
-              {resendStatus && <p className="mt-2 text-xs text-red-800">{resendStatus}</p>}
+              {resendStatus && <p className="mt-2 text-xs text-red-700">{resendStatus}</p>}
             </div>
           )}
+
+          <div className="mt-8">
+            {mode === 'login' ? (
+              <AuthFormLogin onSubmit={handleLogin} />
+            ) : (
+              <AuthFormRegister onSubmit={handleRegister} />
+            )}
+          </div>
 
           {mode === 'login' && loginBannerType === 'info' && loginBanner && (
             <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">

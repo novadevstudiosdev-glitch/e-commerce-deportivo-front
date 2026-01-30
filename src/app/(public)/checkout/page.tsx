@@ -218,6 +218,9 @@ export default function CheckoutPage() {
     const nextErrors: Record<string, string> = {};
 
     if (stepIndex === 1) {
+      if (!form.address.province || form.address.province.trim().length < 2) {
+        nextErrors['province'] = 'Ingresa una provincia valida';
+      }
       if (!form.address.postalCode || !isValidPostalCode(form.address.postalCode)) {
         nextErrors['postalCode'] = 'Ingresa un codigo postal valido (4 digitos)';
       }
@@ -240,7 +243,8 @@ export default function CheckoutPage() {
     }
 
     const postalCode = form.address.postalCode?.trim() ?? '';
-    if (!postalCode) {
+    const province = form.address.province?.trim() ?? '';
+    if (!postalCode || !province) {
       setShippingOptions([]);
       setShippingError(null);
       return;
@@ -260,6 +264,7 @@ export default function CheckoutPage() {
       try {
         const rawOptions = await shippingService.quoteShipping({
           destinationPostalCode: postalCode,
+          province,
           weightKg: estimatedWeightKg,
           dimensionsCm: DEFAULT_PACKAGE_DIMENSIONS,
           declaredValue: computedSubtotal > 0 ? computedSubtotal : undefined,
@@ -568,6 +573,16 @@ export default function CheckoutPage() {
                         Metodo de envio
                       </Typography>
                       <TextField
+                        label="Provincia"
+                        value={form.address.province}
+                        onChange={(e) => handleFieldChange('address.province', e.target.value)}
+                        helperText="Indica tu provincia para cotizar."
+                        fullWidth
+                      />
+                      {errors['province'] && (
+                        <Alert severity="error">{errors['province']}</Alert>
+                      )}
+                      <TextField
                         label="Codigo postal"
                         value={form.address.postalCode}
                         onChange={(e) => {
@@ -606,7 +621,7 @@ export default function CheckoutPage() {
                                     <Typography fontWeight={600}>{option.label}</Typography>
                                     <Typography variant="caption" color="text.secondary">
                                       {formatCurrency(option.price)}
-                                      {option.etaText ? ` · ${option.etaText}` : ''}
+                                      {option.etaText ? ` ï¿½ ${option.etaText}` : ''}
                                     </Typography>
                                   </Box>
                                 }
@@ -801,6 +816,7 @@ function buildShippingLabel(option: ShippingQuoteOption) {
 function isValidPostalCode(value: string) {
   return /^\d{4}$/.test(value);
 }
+
 
 
 

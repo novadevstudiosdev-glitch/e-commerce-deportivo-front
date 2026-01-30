@@ -7,17 +7,47 @@
 import { ProfileForm } from '@/components';
 import { useState } from 'react';
 import { useAuth } from '@/hooks';
+import { userService } from '@/services/user.service';
 import type { UserProfile } from '@/types';
 
 export default function ProfilePage() {
   const { session } = useAuth();
+  const { setSession } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   const handleSubmit = async (data: Partial<UserProfile>) => {
     setIsLoading(true);
-    // TODO: Actualizar perfil
-    console.log('Updating profile:', data);
-    setIsLoading(false);
+    setMessage(null);
+    try {
+      const payload: Parameters<typeof userService.updateMe>[0] = {};
+      if (data.email) payload.email = data.email;
+      if (data.firstName) payload.first_name = data.firstName;
+      if (data.lastName) payload.last_name = data.lastName;
+      if (data.dni) payload.dni = data.dni;
+      if (data.phone) payload.phone = data.phone;
+
+      const response = await userService.updateMe(payload);
+
+      if (session) {
+        const nextUser: UserProfile = {
+          ...session.user,
+          email: response.email ?? session.user.email,
+          firstName: response.profile?.first_name ?? session.user.firstName,
+          lastName: response.profile?.last_name ?? session.user.lastName,
+          dni: response.profile?.dni ?? session.user.dni,
+          phone: response.profile?.phone ?? session.user.phone,
+        };
+        setSession({ ...session, user: nextUser });
+      }
+
+      setMessage('Perfil actualizado correctamente.');
+    } catch (error) {
+      const text = error instanceof Error ? error.message : 'No se pudo actualizar el perfil.';
+      setMessage(text);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -35,6 +65,11 @@ export default function ProfilePage() {
         </button>
       </div>
       <ProfileForm profile={session?.user} onSubmit={handleSubmit} isLoading={isLoading} />
+      {message && (
+        <p className="mt-4 text-sm text-slate-600">
+          {message}
+        </p>
+      )}
     </div>
   );
 }

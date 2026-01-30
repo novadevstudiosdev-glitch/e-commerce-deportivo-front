@@ -63,42 +63,7 @@ const CATEGORY_CARDS: CategoryCard[] = [
   { title: "Accesorios", href: "/categories/accesorios", image: "/categoriaAccesorios.avif", icon: "bag" },
 ];
 
-const FEATURED: FeaturedProduct[] = [
-  {
-    id: "p1",
-    title: "Zapatillas Running",
-    category: "CALZADO",
-    price: "$ 129.999,00",
-    badge: "Oferta",
-    image: "/zapatillas%20running.avif",
-    href: "/products",
-  },
-  {
-    id: "p2",
-    title: "Remera Técnica",
-    category: "ROPA",
-    price: "$ 34.999,00",
-    image: "/remeraTecnica.jpg",
-    href: "/products",
-  },
-  {
-    id: "p3",
-    title: "Jogger Training",
-    category: "ROPA",
-    price: "$ 59.999,00",
-    badge: "Nuevo",
-    image: "/jogger%20training.webp",
-    href: "/products",
-  },
-  {
-    id: "p4",
-    title: "Mochila Deportiva",
-    category: "ACCESORIOS",
-    price: "$ 79.999,00",
-    image: "/mochilaDeportiva.avif",
-    href: "/products",
-  },
-];
+const FEATURED: FeaturedProduct[] = [];
 
 function mapToFeatured(product: ProductPublic): FeaturedProduct {
   const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || "products";
@@ -123,19 +88,41 @@ export default function HomePage() {
 
     const loadFeatured = async () => {
       try {
-        const response = await productsService.getProducts({ limit: 50, sort: "newest" });
-        let items = response.data.filter((item) => item.is_featured);
-        if (items.length === 0) {
-          items = response.data.slice(0, 4);
-        } else {
-          items = items.slice(0, 4);
+        const response = await productsService.getProducts({
+          limit: 50,
+          sort: "newest",
+          includeCoupons: true,
+        });
+        let itemsSource = response.data;
+        if (itemsSource.length === 0) {
+          const baseFromEnv = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+          const apiBase =
+            typeof window !== "undefined" && baseFromEnv.startsWith("/")
+              ? `${window.location.protocol}//${window.location.hostname}:3000${baseFromEnv}`
+              : baseFromEnv;
+          const res = await fetch(`${apiBase}/products?limit=50&sort=newest`);
+          if (res.ok) {
+            const data = (await res.json()) as { data?: ProductPublic[] };
+            itemsSource = data.data ?? [];
+          }
+        }
+        const featuredItems = itemsSource.filter((item) => item.is_featured);
+        let items = (featuredItems.length > 0 ? featuredItems : itemsSource).slice(0, 8);
+
+        if (items.length > 0 && items.length < 8) {
+          const pool = (featuredItems.length > 0 ? featuredItems : itemsSource);
+          let i = 0;
+          while (items.length < 8) {
+            items.push(pool[i % pool.length]);
+            i += 1;
+          }
         }
 
         if (!isMounted) return;
         setFeatured(items.map(mapToFeatured));
       } catch (err) {
         if (!isMounted) return;
-        setFeatured(FEATURED);
+        setFeatured([]);
       }
     };
 
