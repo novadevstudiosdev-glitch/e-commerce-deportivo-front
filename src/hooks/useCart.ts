@@ -5,15 +5,32 @@ import { useCartStore } from '@/store';
 // ============================================
 
 export function useCart() {
-  const { items, addItem, removeItem, updateQuantity, clearCart, getTotalPrice, getTotalItems } =
-    useCartStore();
-
-  return {
+  const {
     items,
+    appliedCoupon,
     addItem,
     removeItem,
     updateQuantity,
     clearCart,
+    applyCoupon,
+    removeCoupon,
+    getSubtotal,
+    getDiscountAmount,
+    getTotalPrice,
+    getTotalItems,
+  } = useCartStore();
+
+  return {
+    items,
+    appliedCoupon,
+    addItem,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    applyCoupon,
+    removeCoupon,
+    subtotal: getSubtotal(),
+    discountAmount: getDiscountAmount(),
     totalPrice: getTotalPrice(),
     totalItems: getTotalItems(),
   };

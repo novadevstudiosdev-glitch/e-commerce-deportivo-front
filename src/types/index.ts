@@ -17,11 +17,17 @@ export interface Product {
   description: string;
   price: number;
   originalPrice?: number;
+  discountPercent?: number;
+  couponBadge?: string;
   category: Category;
   images: string[];
   stock: number;
   rating?: number;
   reviews?: number;
+  sku?: string;
+  sizes?: string[];
+  colors?: string[];
+  specs?: { label: string; value: string }[];
   tags?: string[];
 }
 

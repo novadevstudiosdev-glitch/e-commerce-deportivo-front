@@ -9,7 +9,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Product } from '@/types';
 import { productsService, ProductPublic } from '@/services/products.service';
-import { buildProductSlug, slugify } from '@/lib/utils';
+import { buildProductSlug, normalizeImageList, slugify } from '@/lib/utils';
+import { getCouponBadgeLabel, type Coupon } from '@/lib/coupons';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -33,7 +34,11 @@ export default function ProductsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await productsService.getProducts({ limit: 250, sort: 'newest' });
+        const response = await productsService.getProducts({
+          limit: 250,
+          sort: 'newest',
+          includeCoupons: true,
+        });
         if (!isMounted) return;
         setProducts(response.data.map(mapToProduct));
       } catch (err) {
@@ -174,21 +179,135 @@ export default function ProductsPage() {
 function mapToProduct(product: ProductPublic): Product {
   const categoryName = product.category || 'general';
   const categorySlug = slugify(categoryName);
-  const images = product.images && product.images.length > 0 ? product.images : ['/placeholder.png'];
+  const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'products';
+  const images = normalizeImageList(product.images, bucket);
+  const safeImages = images.length > 0 ? images : ['/placeholder.png'];
+
+  const price = toNumber(product.price) ?? 0;
+  const discount = toNumber(product.discount_percent);
+  const original = toNumber(product.original_price);
+  let originalPrice = original;
+  if (!originalPrice && discount && discount > 0 && discount < 100) {
+    originalPrice = Math.round((price / (1 - discount / 100)) * 100) / 100;
+  }
+  const couponBadge = getActiveCouponLabel(product);
 
   return {
     id: product.id,
     name: product.name,
     slug: buildProductSlug(product.name, product.id),
     description: product.description,
-    price: Number(product.price),
+    price,
+    originalPrice,
+    discountPercent: discount || undefined,
     category: {
       id: categorySlug || categoryName,
       name: categoryName,
       slug: categorySlug || categoryName,
     },
-    images,
+    images: safeImages,
     stock: product.stock,
+    rating: toNumber(product.rating) ?? 0,
+    reviews: toNumber(product.reviews) ?? toNumber(product.reviews_count) ?? 0,
+    sku: product.sku ?? undefined,
+    sizes: normalizeStringArray(product.sizes),
+    colors: normalizeStringArray(product.colors),
+    specs: normalizeSpecs(product.specs),
+    couponBadge,
   };
+}
+
+function toNumber(value: number | string | null | undefined): number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function normalizeStringArray(value: ProductPublic['sizes'] | ProductPublic['colors']): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
+      }
+    } catch {
+      // ignore
+    }
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+type SpecEntry = { label: string; value: string };
+
+function normalizeSpecs(value: ProductPublic['specs']): SpecEntry[] | undefined {
+  if (!value) return undefined;
+
+  const toSpecs = (input: unknown): SpecEntry[] => {
+    if (Array.isArray(input)) {
+      return input
+        .map((item) => {
+          if (item && typeof item === 'object' && 'label' in item && 'value' in item) {
+            const label = String((item as { label: unknown }).label ?? '').trim();
+            const val = String((item as { value: unknown }).value ?? '').trim();
+            if (!label || !val) return null;
+            return { label, value: val };
+          }
+          return null;
+        })
+        .filter((item): item is SpecEntry => Boolean(item));
+    }
+
+    if (input && typeof input === 'object') {
+      return Object.entries(input as Record<string, unknown>)
+        .map(([key, val]) => ({ label: key, value: String(val ?? '') }))
+        .filter((item) => item.label && item.value);
+    }
+
+    return [];
+  };
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return toSpecs(parsed);
+    } catch {
+      return [];
+    }
+  }
+
+  return toSpecs(value);
+}
+
+function getActiveCouponLabel(product: ProductPublic): string | undefined {
+  const rows = product.coupon_products ?? [];
+  const now = new Date();
+
+  for (const row of rows) {
+    const coupon = row.coupons;
+    if (!coupon) continue;
+    if (coupon.is_active === false) continue;
+    if (coupon.starts_at && new Date(coupon.starts_at) > now) continue;
+    if (coupon.ends_at && new Date(coupon.ends_at) < now) continue;
+
+    const normalized: Coupon = {
+      ...coupon,
+      discount_value: Number(coupon.discount_value),
+    };
+    const label = getCouponBadgeLabel(normalized);
+    if (label) return label;
+  }
+
+  return undefined;
 }
 

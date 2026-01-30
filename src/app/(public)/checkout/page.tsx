@@ -95,7 +95,7 @@ type SelectableShippingOption = ShippingQuoteOption & {
 };
 
 export default function CheckoutPage() {
-  const { items, totalPrice } = useCart();
+  const { items, subtotal, discountAmount } = useCart();
   const { session } = useAuth();
   const profile = session?.user;
   const router = useRouter();
@@ -156,7 +156,7 @@ export default function CheckoutPage() {
   const subtotal = useMemo(() => {
     if (typeof totalPrice === 'number') return totalPrice;
     return items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-  }, [items, totalPrice]);
+  }, [items, subtotal]);
 
   const estimatedWeightKg = useMemo(() => {
     const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
@@ -744,7 +744,10 @@ export default function CheckoutPage() {
               </Typography>
               <Divider sx={{ my: 2 }} />
               <Stack spacing={1.5}>
-                <Row label="Subtotal" value={formatCurrency(subtotal)} />
+                <Row label="Subtotal" value={formatCurrency(computedSubtotal)} />
+                {discountAmount > 0 && (
+                  <Row label="Descuento" value={`-${formatCurrency(discountAmount)}`} />
+                )}
                 <Row
                   label="Envio"
                   value={

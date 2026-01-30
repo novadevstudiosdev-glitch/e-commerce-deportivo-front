@@ -2,7 +2,9 @@
 
 import { CartItem } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { useCartStore } from '@/store';
+import { useCart } from '@/hooks';
+import { CouponBox } from '@/components/cart/CouponBox';
+import { applyCoupon } from '@/lib/coupons';
 
 // ============================================
 // CART SUMMARY - COMPONENTE
@@ -13,15 +15,17 @@ interface CartSummaryProps {
 }
 
 export function CartSummary({ items }: CartSummaryProps) {
-  const storeItems = useCartStore((state) => state.items);
+  const { items: storeItems, appliedCoupon } = useCart();
   const displayItems = items || storeItems;
   const subtotal = displayItems.reduce(
     (total, item) => total + item.product.price * item.quantity,
     0
   );
+  const discount = appliedCoupon ? applyCoupon(subtotal, appliedCoupon).discount : 0;
   const shipping = subtotal > 0 ? 0 : 0;
   const taxes = 0;
-  const total = subtotal + shipping + taxes;
+  const total = Math.max(0, subtotal - discount + shipping + taxes);
+  const productIds = displayItems.map((item) => item.product.id);
 
   return (
     <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
@@ -47,6 +51,12 @@ export function CartSummary({ items }: CartSummaryProps) {
           <span>Subtotal</span>
           <span>{formatCurrency(subtotal)}</span>
         </div>
+        {discount > 0 && (
+          <div className="flex items-center justify-between text-emerald-700">
+            <span>Descuento</span>
+            <span>-{formatCurrency(discount)}</span>
+          </div>
+        )}
         <div className="flex items-center justify-between text-slate-600">
           <span>Envio</span>
           <span>{shipping === 0 ? 'Gratis' : formatCurrency(shipping)}</span>
@@ -61,6 +71,8 @@ export function CartSummary({ items }: CartSummaryProps) {
         <span>Total</span>
         <span>{formatCurrency(total)}</span>
       </div>
+
+      <CouponBox subtotal={subtotal} productIds={productIds} />
     </div>
   );
 }

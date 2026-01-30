@@ -40,3 +40,6 @@ export const MAX_PASSWORD_LENGTH = 128;
 
 export const AUTH_TOKEN_KEY = 'auth_token';
 
+export const WELCOME_COUPON_CODE = 'PRIMERACOMPRA';
+export const WELCOME_COUPON_STORAGE_KEY = 'welcome_coupon_code';
+export const WELCOME_COUPON_USED_KEY = 'welcome_coupon_used';

@@ -32,6 +32,7 @@ export default function AdminDashboardPage() {
   const [summary, setSummary] = useState<AdminSummaryDTO | null>(null);
   const [topProducts, setTopProducts] = useState<TopProductDTO[]>([]);
   const [alerts, setAlerts] = useState<StockAlertDTO[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,13 +60,24 @@ export default function AdminDashboardPage() {
     return [];
   };
 
+  const normalizeArrayLength = (value: unknown): number => {
+    if (Array.isArray(value)) return value.length;
+    if (value && typeof value === 'object') {
+      const payload = value as { data?: unknown; items?: unknown };
+      if (Array.isArray(payload.data)) return payload.data.length;
+      if (Array.isArray(payload.items)) return payload.items.length;
+    }
+    return 0;
+  };
+
   const loadData = async () => {
     setIsLoading(true);
     setError(null);
-    const [summaryRes, topRes, alertsRes] = await Promise.all([
+    const [summaryRes, topRes, alertsRes, pendingRes] = await Promise.all([
       adminService.getSummary(),
       adminService.getTopProducts(),
       adminService.getStockAlerts(),
+      adminService.getPendingPayments(),
     ]);
 
     if (!summaryRes.ok) setError(summaryRes.error || 'No se pudo cargar el resumen.');
@@ -75,6 +87,11 @@ export default function AdminDashboardPage() {
     setSummary(summaryRes.ok ? summaryRes.data ?? null : null);
     setTopProducts(topRes.ok ? normalizeTopProducts(topRes.data) : []);
     setAlerts(alertsRes.ok ? normalizeAlerts(alertsRes.data) : []);
+    if (pendingRes.ok) {
+      setPendingCount(normalizeArrayLength(pendingRes.data));
+    } else {
+      setPendingCount(0);
+    }
     setIsLoading(false);
   };
 
@@ -85,10 +102,12 @@ export default function AdminDashboardPage() {
   const metrics = useMemo(() => {
     const totalOrders = Number(summary?.totalOrders ?? summary?.orders ?? 0);
     const totalSales = Number(summary?.totalSales ?? summary?.revenue ?? 0);
-    const pendingPayments = Number(summary?.pendingPayments ?? 0);
-    const stockAlerts = Number(summary?.totalProducts ?? 0);
+    const pendingPayments = pendingCount || Number(summary?.pendingPayments ?? 0);
+    const stockAlerts = alerts.length;
     return { totalOrders, totalSales, pendingPayments, stockAlerts };
-  }, [summary]);
+  }, [alerts.length, pendingCount, summary]);
+
+  const currency = summary?.currency ? String(summary.currency) : 'ARS';
 
   if (isLoading) {
     return <LoadingBlock rows={5} />;
@@ -188,7 +207,11 @@ export default function AdminDashboardPage() {
                       </Typography>
                     </Box>
                     <Typography fontWeight={700}>
-                      {product.revenue ?? product.sales ?? '-'}
+                      {typeof product.revenue === 'number'
+                        ? formatCurrency(product.revenue, currency)
+                        : typeof product.revenue === 'string'
+                          ? formatCurrency(Number(product.revenue), currency)
+                          : product.sales ?? '-'}
                     </Typography>
                   </Stack>
                 ))}
