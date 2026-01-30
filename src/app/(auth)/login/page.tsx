@@ -33,6 +33,10 @@ export default function AuthPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [registerMessage, setRegisterMessage] = useState<string | null>(null);
   const [loginBanner, setLoginBanner] = useState<string | null>(null);
+  const [loginBannerType, setLoginBannerType] = useState<'info' | 'unverified' | null>(null);
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setSession, setIsLoading } = useAuthStore();
@@ -40,6 +44,9 @@ export default function AuthPage() {
   const handleLogin = async (data: LoginValues) => {
     setIsLoading(true);
     setLoginBanner(null);
+    setLoginBannerType(null);
+    setResendStatus(null);
+    setPendingEmail(data.email);
     try {
       const session = await authService.login(data);
       setSession(session);
@@ -55,7 +62,9 @@ export default function AuthPage() {
     } catch (error) {
       const message = getErrorMessage(error);
       if (message.toLowerCase().includes('no esta verificado')) {
-        setLoginBanner(message);
+        setLoginBanner('Verifique su cuenta antes de conectarse o solicite un correo electrónico de verificación.');
+        setLoginBannerType('unverified');
+        setResendStatus(null);
       }
       throw new Error(message);
     } finally {
@@ -75,18 +84,9 @@ export default function AuthPage() {
         phone: data.phone,
       });
       setRegisterMessage('Cuenta creada. Revisa tu email para verificar tu cuenta.');
-      const result = await Swal.fire({
-        icon: 'info',
-        title: 'Verifica tu cuenta',
-        text: 'Revisa tu correo (spam/promociones) para completar la verificacion.',
-        confirmButtonText: 'Ir a Gmail',
-        confirmButtonColor: '#0ea5e9',
-        showCancelButton: true,
-        cancelButtonText: 'Cerrar',
-      });
-      if (result.isConfirmed && typeof window !== 'undefined') {
-        window.location.href = 'https://mail.google.com/mail/u/0/#inbox';
-      }
+      setMode('login');
+      setLoginBanner('Cuenta creada. Revisa tu correo para verificarla.');
+      setLoginBannerType('info');
     } catch (error) {
       throw new Error(getErrorMessage(error));
     } finally {
@@ -98,10 +98,29 @@ export default function AuthPage() {
     const registered = searchParams.get('registered');
     if (registered) {
       setLoginBanner('Cuenta creada. Revisa tu correo para verificarla.');
+      setLoginBannerType('info');
     } else {
       setLoginBanner(null);
+      setLoginBannerType(null);
     }
   }, [searchParams]);
+
+  const handleResendVerification = async () => {
+    if (!pendingEmail) {
+      setResendStatus('Ingresa tu email para reenviar la verificación.');
+      return;
+    }
+    setIsResending(true);
+    setResendStatus(null);
+    try {
+      await authService.resendVerification(pendingEmail);
+      setResendStatus('Correo de verificación reenviado. Revisa tu bandeja.');
+    } catch (error) {
+      setResendStatus(getErrorMessage(error));
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -132,29 +151,33 @@ export default function AuthPage() {
             )}
           </div>
 
-          {mode === 'login' && loginBanner && (
+          {mode === 'login' && loginBannerType === 'unverified' && loginBanner && (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+              <div className="flex items-start gap-2">
+                <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-600 text-xs font-bold text-red-600">
+                  !
+                </span>
+                <p className="font-semibold">{loginBanner}</p>
+              </div>
+              <p className="mt-2 text-red-800">
+                ¿Todavía no puede conectarse? Compruebe su carpeta de correo no deseado, su cuenta podría requerir alguna
+                verificación.
+              </p>
+              <button
+                type="button"
+                className="mt-2 text-sm font-semibold text-sky-700 hover:text-sky-800"
+                onClick={handleResendVerification}
+                disabled={isResending}
+              >
+                {isResending ? 'Reenviando...' : 'Reenvío de verificación de cuenta'}
+              </button>
+              {resendStatus && <p className="mt-2 text-xs text-red-800">{resendStatus}</p>}
+            </div>
+          )}
+
+          {mode === 'login' && loginBannerType === 'info' && loginBanner && (
             <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               <p>{loginBanner}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-700"
-                  onClick={() => {
-                    if (typeof window !== 'undefined') {
-                      window.location.href = 'https://mail.google.com/mail/u/0/#inbox';
-                    }
-                  }}
-                >
-                  Ir a Gmail
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                  onClick={() => setLoginBanner(null)}
-                >
-                  Cerrar
-                </button>
-              </div>
             </div>
           )}
 

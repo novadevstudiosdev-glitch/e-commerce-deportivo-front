@@ -84,7 +84,7 @@ type OrderFromCartResponse = {
 };
 
 export default function CheckoutPage() {
-  const { items, subtotal, discountAmount } = useCart();
+  const { items, subtotal, discountAmount, appliedCoupon } = useCart();
   const { session } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
   const [form, setForm] = useState<CheckoutForm>(initialForm);
@@ -188,18 +188,21 @@ export default function CheckoutPage() {
         throw new Error('No token');
       }
 
+      const orderPayload = {
+        items: items.map((item) => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+        })),
+        ...(appliedCoupon?.code ? { coupon_code: appliedCoupon.code } : {}),
+      };
+
       const orderResponse = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          items: items.map((item) => ({
-            productId: item.product.id,
-            quantity: item.quantity,
-          })),
-        }),
+        body: JSON.stringify(orderPayload),
       });
 
       if (!orderResponse.ok) {
