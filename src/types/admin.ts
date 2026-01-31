@@ -16,6 +16,37 @@ export type AdminSummaryDTO = {
   [key: string]: number | string | boolean | undefined;
 };
 
+export type CatalogSize = {
+  id: string;
+  name: string;
+  type: 'ropa' | 'calzado' | 'unico';
+  sort_order: number;
+};
+
+export type CatalogColor = {
+  id: string;
+  name: string;
+  hex?: string | null;
+};
+
+export type CatalogCategory = {
+  id: string;
+  name: string;
+  slug?: string;
+};
+
+export type CatalogBrand = {
+  id: string;
+  name: string;
+  slug?: string;
+};
+
+export type CatalogSport = {
+  id: string;
+  name: string;
+  slug?: string;
+};
+
 export type TopProductDTO = {
   id: string;
   name: string;
@@ -25,16 +56,19 @@ export type TopProductDTO = {
   stock?: number;
 };
 
-export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled';
+export type PaymentStatus = 'pendiente' | 'aprobado' | 'rechazado' | 'reembolsado';
 
 export type PaymentDTO = {
   id: string;
   orderId?: string;
   userEmail?: string;
-  amount?: number;
+  amount?: number | string;
   status?: PaymentStatus;
   method?: string;
   createdAt?: string;
+  provider?: string;
+  transaction_id?: string | null;
+  created_at?: string;
 };
 
 export type StockAlertDTO = {
@@ -52,6 +86,10 @@ export type AdminProductDTO = {
   currency: string;
   stock: number;
   category: string;
+  slug?: string;
+  category_id?: string | null;
+  brand_id?: string | null;
+  sport_id?: string | null;
   images?: string[] | null;
   is_featured?: boolean;
   is_active?: boolean;
@@ -67,6 +105,74 @@ export type AdminProductForm = {
   category: string;
   images: string[];
   is_featured: boolean;
+};
+
+export type AdminProductImageInput = {
+  url: string;
+  is_main?: boolean;
+  sort_order?: number;
+};
+
+export type AdminProductImageResponse = {
+  id: string;
+  url: string;
+  is_main: boolean;
+  sort_order: number;
+};
+
+export type AdminProductVariantInput = {
+  size_id?: string | null;
+  color_id?: string | null;
+  base_price: number;
+  discount_percentage?: number;
+  stock: number;
+  low_stock_threshold?: number;
+  sku?: string;
+  is_active?: boolean;
+};
+
+export type AdminProductVariantResponse = {
+  id: string;
+  sku: string;
+  size: { id: string; name: string } | null;
+  color: { id: string; name: string; hex?: string | null } | null;
+  base_price: number;
+  discount_percentage: number;
+  final_price: number;
+  stock: number;
+  low_stock_threshold: number;
+  is_active: boolean;
+};
+
+export type AdminProductCreatePayload = {
+  name: string;
+  description: string;
+  category_id: string;
+  brand_id?: string | null;
+  sport_id?: string | null;
+  is_active?: boolean;
+  is_featured?: boolean;
+  images?: AdminProductImageInput[];
+  variants: AdminProductVariantInput[];
+};
+
+export type AdminProductCreateResponse = {
+  id: string;
+  name: string;
+  slug?: string | null;
+  description: string;
+  category_id?: string | null;
+  brand_id?: string | null;
+  sport_id?: string | null;
+  is_active: boolean;
+  is_featured: boolean;
+  images: AdminProductImageResponse[];
+  variants: AdminProductVariantResponse[];
+};
+
+export type AdminProductDetail = AdminProductCreateResponse & {
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type CouponType = 'percent' | 'fixed';
@@ -94,7 +200,7 @@ export type PatchOrderPaymentPayload = {
   status: PaymentStatus;
 };
 
-export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+export type OrderStatus = 'en_preparacion' | 'enviado' | 'entregado';
 
 export type PatchOrderStatusPayload = {
   status: OrderStatus;

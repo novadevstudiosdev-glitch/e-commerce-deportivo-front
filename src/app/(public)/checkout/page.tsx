@@ -218,6 +218,9 @@ export default function CheckoutPage() {
     const nextErrors: Record<string, string> = {};
 
     if (stepIndex === 1) {
+      if (!form.address.street || form.address.street.trim().length < 2) {
+        nextErrors['street'] = 'Ingresa tu calle';
+      }
       if (!form.address.province || form.address.province.trim().length < 2) {
         nextErrors['province'] = 'Ingresa una provincia valida';
       }
@@ -264,7 +267,6 @@ export default function CheckoutPage() {
       try {
         const rawOptions = await shippingService.quoteShipping({
           destinationPostalCode: postalCode,
-          province,
           weightKg: estimatedWeightKg,
           dimensionsCm: DEFAULT_PACKAGE_DIMENSIONS,
           declaredValue: computedSubtotal > 0 ? computedSubtotal : undefined,
@@ -318,6 +320,7 @@ export default function CheckoutPage() {
   }, [
     activeStep,
     form.address.postalCode,
+    form.address.province,
     items.length,
     estimatedWeightKg,
     computedSubtotal,
@@ -376,6 +379,7 @@ export default function CheckoutPage() {
           productId: item.product.id,
           quantity: item.quantity,
         })),
+        shipping_address: form.address,
         ...(appliedCoupon?.code ? { coupon_code: appliedCoupon.code } : {}),
       }),
     });
@@ -395,7 +399,7 @@ export default function CheckoutPage() {
     }
 
     return orderId;
-  }, [items, appliedCoupon?.code]);
+  }, [items, appliedCoupon?.code, form.address]);
 
   const handleCardPaymentSubmit = useCallback(async (formData: CardPaymentFormData) => {
     setSubmitError(null);
@@ -572,6 +576,16 @@ export default function CheckoutPage() {
                       <Typography variant="h6" fontWeight={700}>
                         Metodo de envio
                       </Typography>
+                      <TextField
+                        label="Calle"
+                        value={form.address.street}
+                        onChange={(e) => handleFieldChange('address.street', e.target.value)}
+                        helperText="Ingresa tu calle para completar la direccion."
+                        fullWidth
+                      />
+                      {errors['street'] && (
+                        <Alert severity="error">{errors['street']}</Alert>
+                      )}
                       <TextField
                         label="Provincia"
                         value={form.address.province}

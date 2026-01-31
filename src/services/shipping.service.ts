@@ -15,6 +15,15 @@ export type ShippingQuoteRequest = {
   };
   declaredValue?: number;
   deliveryType?: 'home' | 'pickup' | 'any';
+  // Legacy/optional fields (to keep compatibility with older callers).
+  postalCode?: string;
+  weight?: number;
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+  };
+  province?: string;
 };
 
 export type ShippingQuoteOption = {
@@ -41,19 +50,25 @@ export const shippingService = {
    */
   async quoteShipping(payload: ShippingQuoteRequest): Promise<ShippingQuoteOption[]> {
     try {
+      const destinationPostalCode =
+        payload.destinationPostalCode ?? payload.postalCode;
+      const weightKg = payload.weightKg ?? payload.weight;
+      const dimensionsCm = payload.dimensionsCm ?? payload.dimensions;
+
       const requestPayload = {
-        postalCode: payload.postalCode ?? payload.destinationPostalCode,
-        province: payload.province,
-        weight: payload.weight ?? payload.weightKg,
-        dimensions: payload.dimensions ?? payload.dimensionsCm,
+        destinationPostalCode,
+        weightKg,
+        dimensionsCm,
+        declaredValue: payload.declaredValue,
+        deliveryType: payload.deliveryType,
       };
 
-      if (!requestPayload.postalCode || !requestPayload.province || !requestPayload.weight || !requestPayload.dimensions) {
+      if (!destinationPostalCode || !weightKg || !dimensionsCm) {
         throw new Error('Faltan datos para cotizar el envio.');
       }
 
       const response = await api.post<ShippingQuoteOption[]>(
-        '/shipping/cotizar/correo-argentino',
+        '/shipping/quote',
         requestPayload
       );
       return response.data ?? [];

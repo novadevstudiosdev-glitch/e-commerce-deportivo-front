@@ -35,16 +35,46 @@ export default function AdminPaymentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
+  const parseNumber = (value: unknown): number | undefined => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+      const parsed = Number(value.replace(',', '.'));
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+  };
+
   const normalizePayments = (value: unknown): PaymentDTO[] => {
+    let items: unknown[] = [];
     if (Array.isArray(value)) {
-      return value as PaymentDTO[];
-    }
-    if (value && typeof value === 'object') {
+      items = value;
+    } else if (value && typeof value === 'object') {
       const payload = value as { data?: unknown; items?: unknown };
-      if (Array.isArray(payload.data)) return payload.data as PaymentDTO[];
-      if (Array.isArray(payload.items)) return payload.items as PaymentDTO[];
+      if (Array.isArray(payload.data)) items = payload.data;
+      if (Array.isArray(payload.items)) items = payload.items;
     }
-    return [];
+
+    return items.map((raw) => {
+      const item = raw as Record<string, unknown>;
+      const order = item.order as Record<string, unknown> | undefined;
+      const status = String(item.status ?? '').toLowerCase();
+      const normalizedStatus =
+        status === 'aprobado' || status === 'rechazado' || status === 'reembolsado'
+          ? status
+          : status === 'pendiente'
+            ? 'pendiente'
+            : undefined;
+
+      return {
+        id: String(item.id ?? ''),
+        orderId: (item.orderId ?? item.order_id ?? order?.id) as string | undefined,
+        userEmail: (item.userEmail ?? item.user_email) as string | undefined,
+        amount: parseNumber(item.amount ?? item.total ?? order?.total),
+        status: normalizedStatus,
+        method: (item.method ?? item.provider) as string | undefined,
+        createdAt: (item.createdAt ?? item.created_at) as string | undefined,
+      } satisfies PaymentDTO;
+    });
   };
 
   const loadPayments = useCallback(async () => {
@@ -134,7 +164,15 @@ export default function AdminPaymentsPage() {
                 <TableCell>
                   <StatusChip
                     label={payment.status ?? 'sin estado'}
-                    color={payment.status === 'paid' ? 'success' : 'warning'}
+                    color={
+                      payment.status === 'aprobado'
+                        ? 'success'
+                        : payment.status === 'rechazado'
+                          ? 'error'
+                          : payment.status === 'reembolsado'
+                            ? 'info'
+                            : 'warning'
+                    }
                   />
                 </TableCell>
                 <TableCell>{payment.method ?? '-'}</TableCell>

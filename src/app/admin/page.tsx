@@ -36,28 +36,61 @@ export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const parseNumber = (value: unknown): number | undefined => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+      const parsed = Number(value.replace(',', '.'));
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+  };
+
   const normalizeTopProducts = (value: unknown): TopProductDTO[] => {
+    let items: unknown[] = [];
     if (Array.isArray(value)) {
-      return value as TopProductDTO[];
-    }
-    if (value && typeof value === 'object') {
+      items = value;
+    } else if (value && typeof value === 'object') {
       const payload = value as { data?: unknown; items?: unknown };
-      if (Array.isArray(payload.data)) return payload.data as TopProductDTO[];
-      if (Array.isArray(payload.items)) return payload.items as TopProductDTO[];
+      if (Array.isArray(payload.data)) items = payload.data;
+      if (Array.isArray(payload.items)) items = payload.items;
     }
-    return [];
+
+    return items.map((raw, index) => {
+      const item = raw as Record<string, unknown>;
+      const idCandidate = item.id ?? item.productId ?? item.product_id ?? index;
+      const nameCandidate = item.name ?? item.productName ?? item.product_name ?? 'Producto';
+      return {
+        id: String(idCandidate),
+        name: String(nameCandidate),
+        category: (item.category ?? item.productCategory ?? item.product_category) as string | undefined,
+        sales: parseNumber(item.sales ?? item.units),
+        revenue: parseNumber(item.revenue),
+        stock: parseNumber(item.stock),
+      } satisfies TopProductDTO;
+    });
   };
 
   const normalizeAlerts = (value: unknown): StockAlertDTO[] => {
+    let items: unknown[] = [];
     if (Array.isArray(value)) {
-      return value as StockAlertDTO[];
-    }
-    if (value && typeof value === 'object') {
+      items = value;
+    } else if (value && typeof value === 'object') {
       const payload = value as { data?: unknown; items?: unknown };
-      if (Array.isArray(payload.data)) return payload.data as StockAlertDTO[];
-      if (Array.isArray(payload.items)) return payload.items as StockAlertDTO[];
+      if (Array.isArray(payload.data)) items = payload.data;
+      if (Array.isArray(payload.items)) items = payload.items;
     }
-    return [];
+
+    return items.map((raw, index) => {
+      const item = raw as Record<string, unknown>;
+      const idCandidate = item.productId ?? item.product_id ?? item.id ?? index;
+      const nameCandidate = item.productName ?? item.product_name ?? item.name ?? 'Producto';
+      return {
+        productId: String(idCandidate),
+        productName: String(nameCandidate),
+        stock: parseNumber(item.stock) ?? 0,
+        threshold: parseNumber(item.threshold ?? item.low_stock_threshold),
+      } satisfies StockAlertDTO;
+    });
   };
 
   const normalizeArrayLength = (value: unknown): number => {

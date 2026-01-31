@@ -26,16 +26,37 @@ export default function AdminStockAlertsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const parseNumber = (value: unknown): number | undefined => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+      const parsed = Number(value.replace(',', '.'));
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+  };
+
   const normalizeAlerts = (value: unknown): StockAlertDTO[] => {
+    let items: unknown[] = [];
     if (Array.isArray(value)) {
-      return value as StockAlertDTO[];
+      items = value;
     }
     if (value && typeof value === 'object') {
       const payload = value as { data?: unknown; items?: unknown };
-      if (Array.isArray(payload.data)) return payload.data as StockAlertDTO[];
-      if (Array.isArray(payload.items)) return payload.items as StockAlertDTO[];
+      if (Array.isArray(payload.data)) items = payload.data;
+      if (Array.isArray(payload.items)) items = payload.items;
     }
-    return [];
+
+    return items.map((raw, index) => {
+      const item = raw as Record<string, unknown>;
+      const idCandidate = item.productId ?? item.product_id ?? item.id ?? index;
+      const nameCandidate = item.productName ?? item.product_name ?? item.name ?? 'Producto';
+      return {
+        productId: String(idCandidate),
+        productName: String(nameCandidate),
+        stock: parseNumber(item.stock) ?? 0,
+        threshold: parseNumber(item.threshold ?? item.low_stock_threshold),
+      } satisfies StockAlertDTO;
+    });
   };
 
   const loadAlerts = async () => {

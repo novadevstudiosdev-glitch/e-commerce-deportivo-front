@@ -28,9 +28,10 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import { adminProductsService } from '@/services/admin/products.service';
-import type { AdminProductDTO } from '@/types/admin';
+import type { AdminProductDTO, AdminProductDetail, CatalogCategory } from '@/types/admin';
 import { ConfirmDialog } from '@/components/admin/ConfirmDialog';
 import { DataTable } from '@/components/admin/DataTable';
+import { adminCatalogService } from '@/services/admin/catalog.service';
 
 type RecentProduct = Pick<
   AdminProductDTO,
@@ -43,11 +44,12 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<AdminProductDTO[]>([]);
   const [recentProducts, setRecentProducts] = useState<RecentProduct[]>([]);
   const [listAvailable, setListAvailable] = useState<boolean>(true);
+  const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchId, setSearchId] = useState('');
-  const [selected, setSelected] = useState<AdminProductDTO | null>(null);
+  const [selected, setSelected] = useState<AdminProductDetail | null>(null);
   const [deleteId, setDeleteId] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [snack, setSnack] = useState<{ message: string; severity: 'success' | 'error' } | null>(
@@ -91,6 +93,16 @@ export default function AdminProductsPage() {
   }, []);
 
   useEffect(() => {
+    const loadCategories = async () => {
+      const result = await adminCatalogService.listCategories();
+      if (result.ok && result.data) {
+        setCategories(result.data);
+      }
+    };
+    void loadCategories();
+  }, []);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     const raw = window.localStorage.getItem(RECENT_KEY);
     if (!raw) return;
@@ -110,7 +122,39 @@ export default function AdminProductsPage() {
     window.localStorage.setItem(RECENT_KEY, JSON.stringify(items));
   };
 
-  const pushRecent = (product: AdminProductDTO) => {
+  const categoriesById = useMemo(() => {
+    return new Map(categories.map((category) => [category.id, category]));
+  }, [categories]);
+
+  const resolveCategoryLabel = (categoryId?: string | null) => {
+    if (!categoryId) return 'Sin categoria';
+    return categoriesById.get(categoryId)?.name ?? categoryId;
+  };
+
+  const summarizeVariants = (variants: AdminProductDetail['variants']) => {
+    const totalStock = variants.reduce((acc, variant) => acc + (variant.stock ?? 0), 0);
+    const prices = variants
+      .map((variant) => Number(variant.base_price))
+      .filter((value) => Number.isFinite(value));
+    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+    return { totalStock, minPrice };
+  };
+
+  const pushRecent = (product: AdminProductDTO | AdminProductDetail) => {
+    if ('variants' in product) {
+      const summary = summarizeVariants(product.variants ?? []);
+      const entry: RecentProduct = {
+        id: product.id,
+        name: product.name,
+        category: resolveCategoryLabel(product.category_id),
+        price: summary.minPrice,
+        stock: summary.totalStock,
+        is_active: product.is_active,
+      };
+      const next = [entry, ...recentProducts.filter((item) => item.id !== product.id)].slice(0, 8);
+      persistRecent(next);
+      return;
+    }
     const entry: RecentProduct = {
       id: product.id,
       name: product.name,
@@ -285,8 +329,11 @@ export default function AdminProductsPage() {
             </Typography>
             <Divider sx={{ my: 1.5 }} />
             <Stack direction="row" spacing={2} flexWrap="wrap">
-              <Chip label={`Stock: ${selected.stock}`} />
-              <Chip label={`Categoria: ${selected.category}`} variant="outlined" />
+              <Chip label={`Stock: ${summarizeVariants(selected.variants ?? []).totalStock}`} />
+              <Chip
+                label={`Categoria: ${resolveCategoryLabel(selected.category_id)}`}
+                variant="outlined"
+              />
               <Chip
                 label={selected.is_active === false ? 'Inactivo' : 'Activo'}
                 color={selected.is_active === false ? 'default' : 'success'}
