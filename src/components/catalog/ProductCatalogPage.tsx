@@ -569,9 +569,18 @@ export default function ProductCatalogPage() {
                                 position: 'absolute',
                                 top: 8,
                                 right: 8,
-                                bgcolor: '#fff',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                                '&:hover': { bgcolor: '#fff' },
+                                bgcolor: 'rgba(255,255,255,0.9)',
+                                border: '1px solid rgba(15,23,42,0.08)',
+                                boxShadow: '0 10px 24px rgba(15, 23, 42, 0.14)',
+                                backdropFilter: 'blur(6px)',
+                                color: '#0F172A',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                  bgcolor: '#fff',
+                                  color: '#E11D48',
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: '0 14px 30px rgba(15, 23, 42, 0.2)',
+                                },
                               }}
                             >
                               <FavoriteBorderIcon fontSize="small" />

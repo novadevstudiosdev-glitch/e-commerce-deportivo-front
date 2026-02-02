@@ -125,9 +125,18 @@ export function ProductCard({ product }: ProductCardProps) {
               position: 'absolute',
               top: 14,
               right: 14,
-              bgcolor: '#fff',
-              border: '1px solid #E5E7EB',
-              '&:hover': { bgcolor: '#fff' },
+              bgcolor: 'rgba(255,255,255,0.9)',
+              border: '1px solid rgba(15,23,42,0.08)',
+              boxShadow: '0 10px 24px rgba(15, 23, 42, 0.14)',
+              backdropFilter: 'blur(6px)',
+              color: '#0F172A',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                bgcolor: '#fff',
+                color: '#E11D48',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 14px 30px rgba(15, 23, 42, 0.2)',
+              },
             }}
           >
             <FavoriteBorderIcon fontSize="small" />

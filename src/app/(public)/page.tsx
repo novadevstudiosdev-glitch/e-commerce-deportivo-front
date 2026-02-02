@@ -40,7 +40,7 @@ const SLIDES: Slide[] = [
     subtitle: "Descubrí las últimas tendencias en ropa deportiva",
     cta: "Explorar Ahora",
     href: "/products",
-    image: "/carrusel1.jpeg",
+    image: "/carrusel001.webp",
   },
   {
     title: "Entrená con\nestilo y confort",
@@ -93,6 +93,18 @@ export default function HomePage() {
 
     const loadFeatured = async () => {
       try {
+        const fetchFromApi = async () => {
+          const baseFromEnv = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+          const apiBase =
+            typeof window !== "undefined" && baseFromEnv.startsWith("/")
+              ? `${window.location.protocol}//${window.location.hostname}:3000${baseFromEnv}`
+              : baseFromEnv;
+          const res = await fetch(`${apiBase}/products?limit=50&sort=price_desc`);
+          if (!res.ok) return [] as ProductPublic[];
+          const data = (await res.json()) as { data?: ProductPublic[] };
+          return data.data ?? [];
+        };
+
         const response = await productsService.getProducts({
           limit: 50,
           sort: "newest",
@@ -100,16 +112,7 @@ export default function HomePage() {
         });
         let itemsSource = response.data;
         if (itemsSource.length === 0) {
-          const baseFromEnv = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
-          const apiBase =
-            typeof window !== "undefined" && baseFromEnv.startsWith("/")
-              ? `${window.location.protocol}//${window.location.hostname}:3000${baseFromEnv}`
-              : baseFromEnv;
-          const res = await fetch(`${apiBase}/products?limit=50&sort=newest`);
-          if (res.ok) {
-            const data = (await res.json()) as { data?: ProductPublic[] };
-            itemsSource = data.data ?? [];
-          }
+          itemsSource = await fetchFromApi();
         }
         const featuredItems = itemsSource.filter((item) => item.is_featured);
         let items = (featuredItems.length > 0 ? featuredItems : itemsSource).slice(0, 8);
@@ -127,6 +130,22 @@ export default function HomePage() {
         setFeatured(items.map(mapToFeatured));
       } catch (err) {
         if (!isMounted) return;
+        try {
+          const baseFromEnv = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+          const apiBase =
+            typeof window !== "undefined" && baseFromEnv.startsWith("/")
+              ? `${window.location.protocol}//${window.location.hostname}:3000${baseFromEnv}`
+              : baseFromEnv;
+          const res = await fetch(`${apiBase}/products?limit=50&sort=price_desc`);
+          if (res.ok) {
+            const data = (await res.json()) as { data?: ProductPublic[] };
+            const itemsSource = data.data ?? [];
+            setFeatured(itemsSource.slice(0, 8).map(mapToFeatured));
+            return;
+          }
+        } catch {
+          // ignore
+        }
         setFeatured([]);
       }
     };
@@ -232,7 +251,10 @@ export default function HomePage() {
             </div>
           </AnimatedSection>
 
-          <StaggerGroup className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <StaggerGroup
+            className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
+            forceVisible
+          >
             {featured.map((p) => (
               <StaggerItem key={p.id}>
                 <Link
@@ -265,11 +287,11 @@ export default function HomePage() {
                     {/* Heart */}
                     <button
                       type="button"
-                      className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow hover:bg-white"
+                      className="group absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.16)] ring-1 ring-black/10 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_14px_30px_rgba(15,23,42,0.2)] focus:outline-none focus:ring-2 focus:ring-rose-400"
                       onClick={(e) => e.preventDefault()}
                       aria-label="Favorito"
                     >
-                      <HeartIcon className="h-5 w-5" />
+                      <HeartIcon className="h-5 w-5 transition group-hover:text-rose-500" />
                     </button>
                   </div>
 
@@ -304,8 +326,8 @@ function HeroCarousel() {
 
   return (
     <section className="bg-white">
-      <div className="mx-auto max-w-7xl px-4 pt-4">
-        <div className="relative overflow-hidden rounded-2xl">
+      <div className="w-full pt-4">
+        <div className="relative overflow-hidden">
           {/* Slides */}
           <div className="relative h-[420px] w-full md:h-[520px]">
             {slides.map((s, i) => (
@@ -319,7 +341,7 @@ function HeroCarousel() {
                   alt={s.title}
                   fill
                   className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 1200px"
+                  sizes="100vw"
                   quality={100}
                   priority={i === 0}
                 />
@@ -418,10 +440,11 @@ function HeartIcon({ className = "" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
-        d="M12 21s-7-4.6-9.4-9.1C.9 8.8 2.4 6 5.4 5.2c1.7-.5 3.6.1 4.8 1.5C11.4 5.3 13.3 4.7 15 5.2c3 .8 4.5 3.6 2.8 6.7C19 16.4 12 21 12 21Z"
+        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinejoin="round"
+        strokeLinecap="round"
       />
     </svg>
   );
