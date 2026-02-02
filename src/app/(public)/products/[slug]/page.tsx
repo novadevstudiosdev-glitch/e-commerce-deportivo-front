@@ -31,6 +31,8 @@ export default function ProductDetailPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('descripcion');
   const [related, setRelated] = useState<Product[]>([]);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [sizeError, setSizeError] = useState<string | null>(null);
   const { addItem } = useCart();
 
   useEffect(() => {
@@ -73,6 +75,11 @@ export default function ProductDetailPage() {
       setActiveImage(product.images[0]);
     }
   }, [product?.images]);
+
+  useEffect(() => {
+    setSelectedSize(null);
+    setSizeError(null);
+  }, [product?.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -120,6 +127,8 @@ export default function ProductDetailPage() {
 
   const maxQty = Math.max(1, Math.min(product?.stock ?? 1, 10));
   const outOfStock = (product?.stock ?? 0) <= 0;
+  const requiresSize = sizes.length > 0;
+  const canAddToCart = !outOfStock && (!requiresSize || Boolean(selectedSize));
 
   const handleQuantity = (next: number) => {
     if (!product) return;
@@ -129,7 +138,12 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     if (!product) return;
-    addItem(product, quantity);
+    if (requiresSize && !selectedSize) {
+      setSizeError('Selecciona un talle para continuar.');
+      return;
+    }
+    setSizeError(null);
+    addItem(product, quantity, selectedSize);
   };
 
   if (isLoading) {
@@ -252,12 +266,23 @@ export default function ProductDetailPage() {
                     <button
                       key={size}
                       type="button"
-                      className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-sky-400"
+                      onClick={() => {
+                        setSelectedSize(size);
+                        setSizeError(null);
+                      }}
+                      className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                        selectedSize === size
+                          ? 'border-sky-500 bg-sky-50 text-sky-700'
+                          : 'border-slate-200 text-slate-700 hover:border-sky-400'
+                      }`}
                     >
                       {size}
                     </button>
                   ))}
                 </div>
+                {sizeError && (
+                  <p className="mt-2 text-sm font-semibold text-red-600">{sizeError}</p>
+                )}
               </div>
             )}
 
@@ -304,7 +329,7 @@ export default function ProductDetailPage() {
               <button
                 type="button"
                 onClick={handleAddToCart}
-                disabled={outOfStock}
+                disabled={!canAddToCart}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-6 py-4 text-sm font-semibold text-white shadow hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <CartIcon className="h-5 w-5" />

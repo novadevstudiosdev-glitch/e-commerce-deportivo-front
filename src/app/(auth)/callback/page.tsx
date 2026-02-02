@@ -39,8 +39,42 @@ export default function AuthCallbackPage() {
       return;
     }
 
+    let googleIntent: string | null = null;
+    try {
+      googleIntent = sessionStorage.getItem('googleAuthIntent');
+    } catch (err) {
+      console.warn('No se pudo leer el intento de Google', err);
+    }
+
+    if (googleIntent === 'register') {
+      try {
+        sessionStorage.removeItem('googleAuthIntent');
+      } catch (err) {
+        console.warn('No se pudo limpiar el intento de Google', err);
+      }
+      const notice = 'Tu cuenta ya esta lista. Inicia sesion para comenzar.';
+      const target = `/auth/login?mode=login&notice=${encodeURIComponent(notice)}`;
+      setStatus('Registro completado. Redirigiendo al login...');
+      router.replace(target);
+      setTimeout(() => {
+        try {
+          if (window.location.pathname !== '/auth/login') {
+            window.location.href = target;
+          }
+        } catch (err) {
+          console.warn('No se pudo forzar la redireccion al login', err);
+        }
+      }, 150);
+      return;
+    }
+
     const handleAuth = async () => {
       try {
+        try {
+          sessionStorage.removeItem('googleAuthIntent');
+        } catch (err) {
+          console.warn('No se pudo limpiar el intento de Google', err);
+        }
         const session = await authService.loginWithGoogle(token);
         setSession(session);
         setStatus('Listo. Redirigiendo...');

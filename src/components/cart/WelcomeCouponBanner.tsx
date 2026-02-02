@@ -1,14 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Box, Button, Stack, Typography } from '@mui/material';
-import { useCart, useAuth } from '@/hooks';
-import { validateCoupon } from '@/lib/coupons';
-import {
-  WELCOME_COUPON_CODE,
-  WELCOME_COUPON_STORAGE_KEY,
-  WELCOME_COUPON_USED_KEY,
-} from '@/lib/constants';
+import { useCart, useWelcomeCoupon } from '@/hooks';
+import { WELCOME_COUPON_CODE } from '@/lib/constants';
 
 interface WelcomeCouponBannerProps {
   subtotal: number;
@@ -17,25 +12,19 @@ interface WelcomeCouponBannerProps {
 
 type BannerState = 'idle' | 'applying' | 'applied' | 'error';
 
-export function WelcomeCouponBanner({ subtotal, productIds }: WelcomeCouponBannerProps) {
+export function WelcomeCouponBanner({
+  subtotal: _subtotal,
+  productIds: _productIds,
+}: WelcomeCouponBannerProps) {
   const { appliedCoupon, applyCoupon } = useCart();
-  const { session } = useAuth();
+  const { isLoggedIn, couponAvailable, couponUsed, applyCoupon: applyWelcomeCoupon, isLoading } =
+    useWelcomeCoupon();
   const [state, setState] = useState<BannerState>('idle');
   const [message, setMessage] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
 
-  const isLogged = Boolean(session?.isAuthenticated);
-
-  const welcomeAvailable = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    const stored = localStorage.getItem(WELCOME_COUPON_STORAGE_KEY);
-    const used = localStorage.getItem(WELCOME_COUPON_USED_KEY);
-    if (!stored || used === 'true') return false;
-    return stored.toUpperCase() === WELCOME_COUPON_CODE;
-  }, []);
-
   useEffect(() => {
-    if (!isLogged) {
+    if (!isLoggedIn || isLoading) {
       setVisible(false);
       return;
     }
@@ -43,15 +32,19 @@ export function WelcomeCouponBanner({ subtotal, productIds }: WelcomeCouponBanne
       setVisible(false);
       return;
     }
-    setVisible(welcomeAvailable);
-  }, [appliedCoupon, isLogged, welcomeAvailable]);
+    if (couponUsed) {
+      setVisible(false);
+      return;
+    }
+    setVisible(couponAvailable);
+  }, [appliedCoupon, couponAvailable, couponUsed, isLoggedIn, isLoading]);
 
   const handleApply = async () => {
     if (state === 'applying') return;
     setState('applying');
     setMessage(null);
 
-    const result = await validateCoupon(WELCOME_COUPON_CODE, subtotal, productIds);
+    const result = await applyWelcomeCoupon();
     if (!result.ok) {
       setState('error');
       setMessage(result.reason);
@@ -59,10 +52,6 @@ export function WelcomeCouponBanner({ subtotal, productIds }: WelcomeCouponBanne
     }
 
     applyCoupon(result.coupon);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(WELCOME_COUPON_USED_KEY, 'true');
-    }
-
     setState('applied');
     setMessage('Cupon aplicado correctamente.');
     setTimeout(() => setVisible(false), 1800);
@@ -99,7 +88,7 @@ export function WelcomeCouponBanner({ subtotal, productIds }: WelcomeCouponBanne
       >
         <Box>
           <Typography fontWeight={700} sx={{ mb: 0.5 }}>
-            {isApplied ? 'Cupon aplicado 🎉' : '🎁 Tenes un cupon de bienvenida disponible'}
+            {isApplied ? 'Cupon aplicado 10%' : 'Tenes un cupon de bienvenida disponible'}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Usa {WELCOME_COUPON_CODE} y obtene tu descuento en esta compra.
@@ -117,11 +106,7 @@ export function WelcomeCouponBanner({ subtotal, productIds }: WelcomeCouponBanne
           disabled={state === 'applying' || isApplied}
           sx={{ minWidth: 160 }}
         >
-          {state === 'applying'
-            ? 'Aplicando...'
-            : isApplied
-              ? 'Aplicado'
-              : 'Aplicar cupon'}
+          {state === 'applying' ? 'Aplicando...' : isApplied ? 'Aplicado' : 'Aplicar cupon'}
         </Button>
       </Stack>
     </Alert>

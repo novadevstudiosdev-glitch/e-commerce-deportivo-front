@@ -29,6 +29,7 @@ export { ProfileForm } from './common/ProfileForm';
 export { OrdersTable } from './common/OrdersTable';
 export { OffersModal } from './common/OffersModal';
 export { ToastProvider } from './common/ToastProvider';
+export { WelcomePromoModal } from './common/WelcomePromoModal';
 
 // Admin
 export { AdminSidebar } from './admin/AdminSidebar';

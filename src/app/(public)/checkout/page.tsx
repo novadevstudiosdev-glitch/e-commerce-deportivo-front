@@ -35,6 +35,7 @@ import { ROUTES } from '@/lib/routes';
 import { paymentsService } from '@/services/payments.service';
 import { shippingService, type ShippingQuoteOption } from '@/services/shipping.service';
 import { MercadoPagoCardBrick } from '@/components/cart/MercadoPagoCardBrick';
+import { CouponBox } from '@/components';
 import type { CheckoutForm, CheckoutOrderSummary, ShippingMethod } from '@/types/checkout';
 
 const STORAGE_KEY = 'checkout-form';
@@ -368,6 +369,11 @@ export default function CheckoutPage() {
       throw new Error('No se encontro token de sesion.');
     }
 
+    const sizeNotes = items
+      .filter((item) => item.size)
+      .map((item) => `${item.product.name} x${item.quantity}: talle ${item.size}`)
+      .join(' | ');
+
     const orderResponse = await fetch('/api/orders', {
       method: 'POST',
       headers: {
@@ -380,6 +386,7 @@ export default function CheckoutPage() {
           quantity: item.quantity,
         })),
         shipping_address: form.address,
+        ...(sizeNotes ? { notes: sizeNotes } : {}),
         ...(appliedCoupon?.code ? { coupon_code: appliedCoupon.code } : {}),
       }),
     });
@@ -792,6 +799,10 @@ export default function CheckoutPage() {
                 <Divider />
                 <Row label="Total" value={formatCurrency(total)} strong />
               </Stack>
+              <CouponBox
+                subtotal={computedSubtotal}
+                productIds={items.map((item) => item.product.id)}
+              />
               <Divider sx={{ my: 2 }} />
               <Typography variant="caption" color="text.secondary">
                 Los montos se actualizan segun el envio seleccionado.
