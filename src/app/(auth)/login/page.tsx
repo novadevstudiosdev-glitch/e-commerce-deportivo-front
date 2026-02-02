@@ -97,14 +97,24 @@ export default function AuthPage() {
   };
 
   useEffect(() => {
+    const modeParam = searchParams.get('mode');
+    if (modeParam === 'login' || modeParam === 'register') {
+      setMode(modeParam);
+    }
+    const notice = searchParams.get('notice');
     const registered = searchParams.get('registered');
+    if (notice) {
+      setLoginBanner(notice);
+      setLoginBannerType('info');
+      return;
+    }
     if (registered) {
       setLoginBanner('Cuenta creada. Revisa tu correo para verificarla.');
       setLoginBannerType('info');
-    } else {
-      setLoginBanner(null);
-      setLoginBannerType(null);
+      return;
     }
+    setLoginBanner(null);
+    setLoginBannerType(null);
   }, [searchParams]);
 
   const handleResendVerification = async () => {

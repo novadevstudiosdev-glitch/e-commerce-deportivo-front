@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Sora } from 'next/font/google';
 import {
   Box,
@@ -33,6 +33,7 @@ import { productsService, ProductPublic } from '@/services/products.service';
 import { buildProductSlug, capitalize, formatCurrency, normalizeImageList, slugify } from '@/lib/utils';
 import { getCouponBadgeLabel, type Coupon } from '@/lib/coupons';
 import { ROUTES } from '@/lib/routes';
+import Swal from 'sweetalert2';
 
 const sora = Sora({
   subsets: ['latin'],
@@ -140,6 +141,7 @@ function getDiscountLabel(product: Product) {
 
 export default function ProductCatalogPage() {
   const { addItem } = useCart();
+  const router = useRouter();
 
   // ✅ SIN any: tipamos params
   const params = useParams<{ slug?: string; category?: string }>();
@@ -282,6 +284,18 @@ export default function ProductCatalogPage() {
   const handleAddToCart = (product: Product) => {
     const primaryCategory = product.categories[0] || 'general';
     const slug = product.slug ?? buildProductSlug(product.name, product.id);
+    const detailHref = ROUTES.PRODUCT_DETAIL(slug);
+
+    if (product.sizes && product.sizes.length > 0) {
+      void Swal.fire({
+        icon: 'info',
+        title: 'Elegi tu talle',
+        text: 'Este producto tiene talles. Elegi tu talle antes de agregarlo al carrito.',
+        confirmButtonText: 'Elegir talle',
+        confirmButtonColor: '#0ea5e9',
+      }).then(() => router.push(detailHref));
+      return;
+    }
 
     addItem(
       {

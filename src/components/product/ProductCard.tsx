@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Box,
@@ -19,6 +20,7 @@ import { Product } from '@/types';
 import { ROUTES } from '@/lib/routes';
 import { formatCurrency, normalizeImageList, calculateDiscount } from '@/lib/utils';
 import { useCart } from '@/hooks';
+import Swal from 'sweetalert2';
 
 // ============================================
 // PRODUCT CARD - COMPONENTE (PRO)
@@ -30,10 +32,12 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
+  const router = useRouter();
   const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'products';
   const images = normalizeImageList(product.images, bucket);
   const primaryImage = images[0] || '/placeholder.png';
   const [imgSrc, setImgSrc] = useState(primaryImage);
+  const detailHref = ROUTES.PRODUCT_DETAIL(product.slug);
 
   useEffect(() => {
     setImgSrc(primaryImage);
@@ -51,9 +55,20 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const couponLabel = product.couponBadge;
 
-  const handleAddToCart = (event: React.MouseEvent) => {
+  const handleAddToCart = async (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
+    if (product.sizes && product.sizes.length > 0) {
+      await Swal.fire({
+        icon: 'info',
+        title: 'Elegi tu talle',
+        text: 'Este producto tiene talles. Elegi tu talle antes de agregarlo al carrito.',
+        confirmButtonText: 'Elegir talle',
+        confirmButtonColor: '#0ea5e9',
+      });
+      router.push(detailHref);
+      return;
+    }
     addItem(product, 1);
   };
 

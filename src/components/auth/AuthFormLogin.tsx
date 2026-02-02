@@ -46,6 +46,11 @@ export default function LoginForm({ onSubmit }: Props) {
 
   const handleGoogle = () => {
     if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('googleAuthIntent', 'login');
+      } catch (error) {
+        console.warn('No se pudo guardar el intento de Google', error);
+      }
       window.location.href = googleAuthUrl;
     }
   };

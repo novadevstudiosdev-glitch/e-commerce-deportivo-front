@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { productsService, ProductPublic } from "@/services/products.service";
 import { buildProductSlug, formatCurrency, normalizeImageList } from "@/lib/utils";
-import { AnimatedSection, StaggerGroup, StaggerItem } from "@/components";
+import { AnimatedSection, StaggerGroup, StaggerItem, WelcomePromoModal } from "@/components";
+import { useAuth, useWelcomeCoupon } from "@/hooks";
 
 type Slide = {
   title: string;
@@ -82,6 +83,10 @@ function mapToFeatured(product: ProductPublic): FeaturedProduct {
 
 export default function HomePage() {
   const [featured, setFeatured] = useState<FeaturedProduct[]>(FEATURED);
+  const { isAuthenticated } = useAuth();
+  const { couponAvailable, couponUsed, isLoading: couponLoading } = useWelcomeCoupon();
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [promoVariant, setPromoVariant] = useState<"guest" | "logged_available" | "none">("none");
 
   useEffect(() => {
     let isMounted = true;
@@ -133,8 +138,37 @@ export default function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (couponLoading) return;
+
+    if (!isAuthenticated) {
+      setPromoVariant("guest");
+      setPromoOpen(true);
+      return;
+    }
+
+    if (couponUsed) {
+      setPromoVariant("none");
+      setPromoOpen(false);
+      return;
+    }
+
+    if (couponAvailable || !couponUsed) {
+      setPromoVariant("logged_available");
+      setPromoOpen(true);
+    }
+  }, [couponAvailable, couponLoading, couponUsed, isAuthenticated]);
+
   return (
     <div className="bg-white">
+      <WelcomePromoModal
+        variant={promoVariant}
+        open={promoOpen}
+        onClose={() => setPromoOpen(false)}
+        primaryHref={promoVariant === "guest" ? "/register" : "/cart"}
+        primaryLabel={promoVariant === "guest" ? "Registrarme" : "Ir al carrito"}
+        secondaryLabel={promoVariant === "guest" ? "Mas tarde" : "Cerrar"}
+      />
       <HeroCarousel />
 
       {/* Categorías (igual al video) */}

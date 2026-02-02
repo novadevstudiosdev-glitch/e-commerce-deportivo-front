@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
 import { validateCoupon } from '@/lib/coupons';
-import { useCart } from '@/hooks';
+import { useAuth, useCart, useWelcomeCoupon } from '@/hooks';
+import { WELCOME_COUPON_CODE } from '@/lib/constants';
+import { WelcomePromoModal } from '@/components/common/WelcomePromoModal';
 
 interface CouponBoxProps {
   subtotal: number;
@@ -12,8 +14,11 @@ interface CouponBoxProps {
 
 export function CouponBox({ subtotal, productIds }: CouponBoxProps) {
   const { appliedCoupon, applyCoupon, removeCoupon } = useCart();
+  const { isAuthenticated } = useAuth();
+  const { applyCoupon: applyWelcomeCoupon } = useWelcomeCoupon();
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
     null
   );
@@ -31,6 +36,30 @@ export function CouponBox({ subtotal, productIds }: CouponBoxProps) {
     const finalCode = candidate.trim();
     setIsLoading(true);
     setMessage(null);
+    if (finalCode.toUpperCase() === WELCOME_COUPON_CODE) {
+      if (!isAuthenticated) {
+        setIsLoading(false);
+        setShowWelcomeModal(true);
+        setMessage({ type: 'error', text: 'Registrate para obtener tu 10% OFF.' });
+        return;
+      }
+
+      const result = await applyWelcomeCoupon();
+      if (!result.ok) {
+        setIsLoading(false);
+        const messageText = result.requiresLogin
+          ? 'No se pudo validar el cupon, intenta de nuevo.'
+          : result.reason;
+        setMessage({ type: 'error', text: messageText });
+        return;
+      }
+
+      applyCoupon(result.coupon);
+      setMessage({ type: 'success', text: '\u2705 10% aplicado.' });
+      setCode(WELCOME_COUPON_CODE);
+      setIsLoading(false);
+      return;
+    }
     const result = await validateCoupon(finalCode, subtotal, productIds);
     if (!result.ok) {
       setMessage({ type: 'error', text: result.reason });
@@ -88,6 +117,15 @@ export function CouponBox({ subtotal, productIds }: CouponBoxProps) {
           {message.text}
         </Alert>
       )}
+
+      <WelcomePromoModal
+        variant="guest"
+        open={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
+        primaryHref="/register"
+        primaryLabel="Registrarme"
+        secondaryLabel="Mas tarde"
+      />
     </Box>
   );
 }

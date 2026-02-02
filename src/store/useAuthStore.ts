@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Session } from '@/types';
+import { AUTH_TOKEN_KEY } from '@/lib/constants';
 
 // ============================================
 // STORE DE AUTENTICACIÓN
@@ -27,5 +28,8 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
   logout: () => {
     set({ session: null });
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+    }
   },
 }));

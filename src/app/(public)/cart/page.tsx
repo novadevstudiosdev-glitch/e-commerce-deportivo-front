@@ -187,6 +187,11 @@ export default function CartPage() {
                             <Typography color="text.secondary" variant="body2">
                               Precio unitario: {formatCurrency(item.product.price)}
                             </Typography>
+                            {item.size && (
+                              <Typography color="text.secondary" variant="body2">
+                                Talle: {item.size}
+                              </Typography>
+                            )}
                             <Typography color="text.secondary" variant="body2">
                               Total item: {formatCurrency(lineTotal)}
                             </Typography>
@@ -197,7 +202,7 @@ export default function CartPage() {
                             <Stack direction="row" spacing={1} alignItems="center">
                               <IconButton
                                 size="small"
-                                onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                 disabled={item.quantity <= 1}
                               >
                                 <RemoveIcon fontSize="small" />
@@ -207,7 +212,7 @@ export default function CartPage() {
                                 onChange={(event) => {
                                   const value = Number(event.target.value);
                                   if (!Number.isNaN(value)) {
-                                    updateQuantity(item.product.id, value);
+                                    updateQuantity(item.id, value);
                                   }
                                 }}
                                 inputProps={{ min: 1, style: { textAlign: 'center' } }}
@@ -216,7 +221,7 @@ export default function CartPage() {
                               />
                               <IconButton
                                 size="small"
-                                onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
                               >
                                 <AddIcon fontSize="small" />
                               </IconButton>
@@ -224,7 +229,7 @@ export default function CartPage() {
                             <Button
                               color="error"
                               startIcon={<DeleteOutlineIcon />}
-                              onClick={() => removeItem(item.product.id)}
+                              onClick={() => removeItem(item.id)}
                               size="small"
                             >
                               Eliminar
