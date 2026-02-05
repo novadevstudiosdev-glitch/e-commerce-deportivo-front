@@ -3,9 +3,6 @@ import api from '@/lib/api';
 import {
   AUTH_TOKEN_KEY,
   MIN_PASSWORD_LENGTH,
-  WELCOME_COUPON_CODE,
-  WELCOME_COUPON_STORAGE_KEY,
-  WELCOME_COUPON_USED_KEY,
 } from '@/lib/constants';
 import { isValidEmail, isValidPassword } from '@/lib/validators';
 import type { LoginCredentials, RegisterData, Session, UserProfile, UserRole } from '@/types';
@@ -104,14 +101,6 @@ export const authService = {
       }
 
       setToken(token);
-      if (typeof window !== 'undefined') {
-        const hasWelcome = localStorage.getItem(WELCOME_COUPON_STORAGE_KEY);
-        const usedWelcome = localStorage.getItem(WELCOME_COUPON_USED_KEY);
-        if (!hasWelcome && usedWelcome !== 'true') {
-          localStorage.setItem(WELCOME_COUPON_STORAGE_KEY, WELCOME_COUPON_CODE);
-          localStorage.setItem(WELCOME_COUPON_USED_KEY, 'false');
-        }
-      }
       return fetchSessionFromToken();
     } catch (error) {
       const message = getErrorMessage(error as AxiosError<AuthErrorResponse> | Error);

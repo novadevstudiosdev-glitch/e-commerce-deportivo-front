@@ -35,6 +35,7 @@ export interface CartItem {
   id: string;
   product: Product;
   quantity: number;
+  size?: string | null;
   addedAt: Date;
 }
 

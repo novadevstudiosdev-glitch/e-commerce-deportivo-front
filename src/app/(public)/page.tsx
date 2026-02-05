@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { productsService, ProductPublic } from "@/services/products.service";
 import { buildProductSlug, formatCurrency, normalizeImageList } from "@/lib/utils";
-import { AnimatedSection, StaggerGroup, StaggerItem } from "@/components";
+import { AnimatedSection, StaggerGroup, StaggerItem, WelcomePromoModal } from "@/components";
+import { useAuth, useWelcomeCoupon } from "@/hooks";
 
 type Slide = {
   title: string;
@@ -39,7 +40,7 @@ const SLIDES: Slide[] = [
     subtitle: "Descubrí las últimas tendencias en ropa deportiva",
     cta: "Explorar Ahora",
     href: "/products",
-    image: "/carrusel1.jpeg",
+    image: "/carrusel001.webp",
   },
   {
     title: "Entrená con\nestilo y confort",
@@ -63,42 +64,7 @@ const CATEGORY_CARDS: CategoryCard[] = [
   { title: "Accesorios", href: "/categories/accesorios", image: "/categoriaAccesorios.avif", icon: "bag" },
 ];
 
-const FEATURED: FeaturedProduct[] = [
-  {
-    id: "p1",
-    title: "Zapatillas Running",
-    category: "CALZADO",
-    price: "$ 129.999,00",
-    badge: "Oferta",
-    image: "/zapatillas%20running.avif",
-    href: "/products",
-  },
-  {
-    id: "p2",
-    title: "Remera Técnica",
-    category: "ROPA",
-    price: "$ 34.999,00",
-    image: "/remeraTecnica.jpg",
-    href: "/products",
-  },
-  {
-    id: "p3",
-    title: "Jogger Training",
-    category: "ROPA",
-    price: "$ 59.999,00",
-    badge: "Nuevo",
-    image: "/jogger%20training.webp",
-    href: "/products",
-  },
-  {
-    id: "p4",
-    title: "Mochila Deportiva",
-    category: "ACCESORIOS",
-    price: "$ 79.999,00",
-    image: "/mochilaDeportiva.avif",
-    href: "/products",
-  },
-];
+const FEATURED: FeaturedProduct[] = [];
 
 function mapToFeatured(product: ProductPublic): FeaturedProduct {
   const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || "products";
@@ -117,25 +83,70 @@ function mapToFeatured(product: ProductPublic): FeaturedProduct {
 
 export default function HomePage() {
   const [featured, setFeatured] = useState<FeaturedProduct[]>(FEATURED);
+  const { isAuthenticated } = useAuth();
+  const { couponAvailable, couponUsed, isLoading: couponLoading } = useWelcomeCoupon();
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [promoVariant, setPromoVariant] = useState<"guest" | "logged_available" | "none">("none");
 
   useEffect(() => {
     let isMounted = true;
 
     const loadFeatured = async () => {
       try {
-        const response = await productsService.getProducts({ limit: 50, sort: "newest" });
-        let items = response.data.filter((item) => item.is_featured);
-        if (items.length === 0) {
-          items = response.data.slice(0, 4);
-        } else {
-          items = items.slice(0, 4);
+        const fetchFromApi = async () => {
+          const baseFromEnv = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+          const apiBase =
+            typeof window !== "undefined" && baseFromEnv.startsWith("/")
+              ? `${window.location.protocol}//${window.location.hostname}:3000${baseFromEnv}`
+              : baseFromEnv;
+          const res = await fetch(`${apiBase}/products?limit=50&sort=price_desc`);
+          if (!res.ok) return [] as ProductPublic[];
+          const data = (await res.json()) as { data?: ProductPublic[] };
+          return data.data ?? [];
+        };
+
+        const response = await productsService.getProducts({
+          limit: 50,
+          sort: "newest",
+          includeCoupons: true,
+        });
+        let itemsSource = response.data;
+        if (itemsSource.length === 0) {
+          itemsSource = await fetchFromApi();
+        }
+        const featuredItems = itemsSource.filter((item) => item.is_featured);
+        let items = (featuredItems.length > 0 ? featuredItems : itemsSource).slice(0, 8);
+
+        if (items.length > 0 && items.length < 8) {
+          const pool = (featuredItems.length > 0 ? featuredItems : itemsSource);
+          let i = 0;
+          while (items.length < 8) {
+            items.push(pool[i % pool.length]);
+            i += 1;
+          }
         }
 
         if (!isMounted) return;
         setFeatured(items.map(mapToFeatured));
       } catch (err) {
         if (!isMounted) return;
-        setFeatured(FEATURED);
+        try {
+          const baseFromEnv = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+          const apiBase =
+            typeof window !== "undefined" && baseFromEnv.startsWith("/")
+              ? `${window.location.protocol}//${window.location.hostname}:3000${baseFromEnv}`
+              : baseFromEnv;
+          const res = await fetch(`${apiBase}/products?limit=50&sort=price_desc`);
+          if (res.ok) {
+            const data = (await res.json()) as { data?: ProductPublic[] };
+            const itemsSource = data.data ?? [];
+            setFeatured(itemsSource.slice(0, 8).map(mapToFeatured));
+            return;
+          }
+        } catch {
+          // ignore
+        }
+        setFeatured([]);
       }
     };
 
@@ -146,8 +157,37 @@ export default function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (couponLoading) return;
+
+    if (!isAuthenticated) {
+      setPromoVariant("guest");
+      setPromoOpen(true);
+      return;
+    }
+
+    if (couponUsed) {
+      setPromoVariant("none");
+      setPromoOpen(false);
+      return;
+    }
+
+    if (couponAvailable || !couponUsed) {
+      setPromoVariant("logged_available");
+      setPromoOpen(true);
+    }
+  }, [couponAvailable, couponLoading, couponUsed, isAuthenticated]);
+
   return (
     <div className="bg-white">
+      <WelcomePromoModal
+        variant={promoVariant}
+        open={promoOpen}
+        onClose={() => setPromoOpen(false)}
+        primaryHref={promoVariant === "guest" ? "/register" : "/cart"}
+        primaryLabel={promoVariant === "guest" ? "Registrarme" : "Ir al carrito"}
+        secondaryLabel={promoVariant === "guest" ? "Mas tarde" : "Cerrar"}
+      />
       <HeroCarousel />
 
       {/* Categorías (igual al video) */}
@@ -211,7 +251,10 @@ export default function HomePage() {
             </div>
           </AnimatedSection>
 
-          <StaggerGroup className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <StaggerGroup
+            className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
+            forceVisible
+          >
             {featured.map((p) => (
               <StaggerItem key={p.id}>
                 <Link
@@ -244,11 +287,11 @@ export default function HomePage() {
                     {/* Heart */}
                     <button
                       type="button"
-                      className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow hover:bg-white"
+                      className="group absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.16)] ring-1 ring-black/10 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_14px_30px_rgba(15,23,42,0.2)] focus:outline-none focus:ring-2 focus:ring-rose-400"
                       onClick={(e) => e.preventDefault()}
                       aria-label="Favorito"
                     >
-                      <HeartIcon className="h-5 w-5" />
+                      <HeartIcon className="h-5 w-5 transition group-hover:text-rose-500" />
                     </button>
                   </div>
 
@@ -283,8 +326,8 @@ function HeroCarousel() {
 
   return (
     <section className="bg-white">
-      <div className="mx-auto max-w-7xl px-4 pt-4">
-        <div className="relative overflow-hidden rounded-2xl">
+      <div className="w-full pt-4">
+        <div className="relative overflow-hidden">
           {/* Slides */}
           <div className="relative h-[420px] w-full md:h-[520px]">
             {slides.map((s, i) => (
@@ -298,7 +341,7 @@ function HeroCarousel() {
                   alt={s.title}
                   fill
                   className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 1200px"
+                  sizes="100vw"
                   quality={100}
                   priority={i === 0}
                 />
@@ -397,10 +440,11 @@ function HeartIcon({ className = "" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
-        d="M12 21s-7-4.6-9.4-9.1C.9 8.8 2.4 6 5.4 5.2c1.7-.5 3.6.1 4.8 1.5C11.4 5.3 13.3 4.7 15 5.2c3 .8 4.5 3.6 2.8 6.7C19 16.4 12 21 12 21Z"
+        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinejoin="round"
+        strokeLinecap="round"
       />
     </svg>
   );

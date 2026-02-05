@@ -21,8 +21,8 @@ import type { OrderStatus, PaymentStatus } from '@/types/admin';
 
 export default function AdminOrdersPage() {
   const [orderId, setOrderId] = useState('');
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('pending');
-  const [orderStatus, setOrderStatus] = useState<OrderStatus>('processing');
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('aprobado');
+  const [orderStatus, setOrderStatus] = useState<OrderStatus>('en_preparacion');
   const [isLoading, setIsLoading] = useState(false);
   const [snack, setSnack] = useState<{ message: string; severity: 'success' | 'error' } | null>(
     null
@@ -90,11 +90,9 @@ export default function AdminOrdersPage() {
                     onChange={(e) => setPaymentStatus(e.target.value as PaymentStatus)}
                     fullWidth
                   >
-                    {['pending', 'paid', 'failed', 'refunded', 'cancelled'].map((status) => (
-                      <MenuItem key={status} value={status}>
-                        {status}
-                      </MenuItem>
-                    ))}
+                    <MenuItem value="aprobado">Aprobado</MenuItem>
+                    <MenuItem value="rechazado">Rechazado</MenuItem>
+                    <MenuItem value="reembolsado">Reembolsado</MenuItem>
                   </TextField>
                   <Button
                     variant="contained"
@@ -119,11 +117,9 @@ export default function AdminOrdersPage() {
                     onChange={(e) => setOrderStatus(e.target.value as OrderStatus)}
                     fullWidth
                   >
-                    {['pending', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => (
-                      <MenuItem key={status} value={status}>
-                        {status}
-                      </MenuItem>
-                    ))}
+                    <MenuItem value="en_preparacion">En preparacion</MenuItem>
+                    <MenuItem value="enviado">Enviado</MenuItem>
+                    <MenuItem value="entregado">Entregado</MenuItem>
                   </TextField>
                   <Button
                     variant="contained"

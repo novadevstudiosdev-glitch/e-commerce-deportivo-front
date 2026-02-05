@@ -81,7 +81,7 @@ export default function CheckoutSuccessPage() {
                 <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
                   <Typography fontWeight={600}>Envio</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {order.shippingMethod} -{' '}
+                    {(order.shippingOptionLabel || order.shippingMethod) || 'Sin seleccionar'} -{' '}
                     {order.shippingCost === 0 ? 'Gratis' : formatCurrency(order.shippingCost)}
                   </Typography>
                 </Paper>

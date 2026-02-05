@@ -69,6 +69,11 @@ export default function RegisterForm({ onSubmit, isLoading = false }: Props) {
 
   const handleGoogle = () => {
     if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("googleAuthIntent", "register");
+      } catch (error) {
+        console.warn("No se pudo guardar el intento de Google", error);
+      }
       window.location.href = googleAuthUrl;
     }
   };
